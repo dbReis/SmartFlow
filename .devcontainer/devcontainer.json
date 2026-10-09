@@ -1,0 +1,41 @@
+{
+  "name": "SmartFlow",
+  "build": {
+    "dockerfile": "Dockerfile",
+    "context": "."
+  },
+  "remoteUser": "dev",
+  "forwardPorts": [8888],
+  "portsAttributes": {
+    "8888": { "label": "Tornado API" }
+  },
+  // Keep Claude Code login and settings across container rebuilds
+  "mounts": [
+    "source=claude-config-${devcontainerId},target=/home/dev/.claude,type=volume"
+  ],
+  "postCreateCommand": "if [ -f pyproject.toml ]; then uv sync; fi",
+  "customizations": {
+    "vscode": {
+      "extensions": [
+        "ms-python.python",
+        "charliermarsh.ruff",
+        "anthropic.claude-code"
+      ],
+      "settings": {
+        "python.defaultInterpreterPath": "/opt/venv/bin/python",
+        "python.testing.pytestEnabled": true,
+        // Ruff is both the linter and the formatter
+        "ruff.lint.enable": true,
+        "[python]": {
+          "editor.defaultFormatter": "charliermarsh.ruff",
+          "editor.formatOnSave": true,
+          "editor.codeActionsOnSave": {
+            // Apply Ruff's auto-fixable lint fixes on save
+            "source.fixAll": "explicit",
+            "source.organizeImports": "explicit"
+          }
+        }
+      }
+    }
+  }
+}
