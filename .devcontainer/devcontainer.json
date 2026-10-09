@@ -24,6 +24,14 @@
       "settings": {
         "python.defaultInterpreterPath": "/opt/venv/bin/python",
         "python.testing.pytestEnabled": true,
+        // Suggest imports from installed libraries, not just from the project
+        "python.analysis.autoImportCompletions": true,
+        // Index deeper than top level so e.g. sqlalchemy.ext.asyncio is found
+        "python.analysis.packageIndexDepths": [
+          { "name": "sqlalchemy", "depth": 4 },
+          { "name": "tornado", "depth": 2 },
+          { "name": "pydantic_settings", "depth": 2 }
+        ],
         // Ruff is both the linter and the formatter
         "ruff.lint.enable": true,
         "[python]": {
