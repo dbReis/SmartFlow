@@ -9,6 +9,7 @@ from smartflow.storage.database import (
     check_connection,
     create_engine,
     create_session_factory,
+    create_tables,
 )
 
 log = structlog.get_logger(__name__)
@@ -17,6 +18,7 @@ log = structlog.get_logger(__name__)
 async def serve(settings: Settings):
     engine = create_engine(settings)
     await check_connection(engine)
+    await create_tables(engine)
     session_maker = create_session_factory(engine)
     app = make_app(settings, session_maker)
     app.listen(settings.port, address=settings.host)
