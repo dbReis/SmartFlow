@@ -8,6 +8,7 @@ from sqlalchemy.ext.asyncio import (
 )
 
 from smartflow.config import Settings
+from smartflow.models import Base
 
 log = structlog.get_logger(__name__)
 
@@ -52,3 +53,20 @@ async def check_connection(engine: AsyncEngine) -> None:
         )
 
         raise
+
+
+async def create_tables(engine: AsyncEngine) -> None:
+    """Create missing tables. Existing tables are left unchanged (no migrations)."""
+    log.debug("Creating database tables", tables=list(Base.metadata.tables))
+    try:
+        # One transaction: on any error, no table is left half-created.
+        async with engine.begin() as conn:
+            await conn.run_sync(Base.metadata.create_all)
+    except Exception as exc:
+        log.error(
+            "tables_creation_failed",
+            host=engine.url.host,
+            error=type(exc).__name__,
+        )
+        raise
+    log.info("tables_ready", tables=list(Base.metadata.tables))
