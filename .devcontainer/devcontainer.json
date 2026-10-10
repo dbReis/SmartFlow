@@ -37,6 +37,9 @@
         "[python]": {
           "editor.defaultFormatter": "charliermarsh.ruff",
           "editor.formatOnSave": true,
+          // Show the suggestion list while typing and after ".", not only on Ctrl+Space
+          "editor.quickSuggestions": { "other": "on", "comments": "off", "strings": "off" },
+          "editor.suggestOnTriggerCharacters": true,
           "editor.codeActionsOnSave": {
             // Apply Ruff's auto-fixable lint fixes on save
             "source.fixAll": "explicit",
