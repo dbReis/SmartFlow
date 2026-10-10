@@ -72,14 +72,14 @@ The application is split into **layers**. A request travels down through them an
 
 ```
 src/smartflow/
-├── __main__.py        ✅ Entry point: settings → logging → engine → connection check → app → serve
+├── __main__.py        ✅ Entry point: settings → logging → engine → connection check → tables → app → serve
 ├── app.py             ✅ make_app(): builds the Tornado Application and its route table
 ├── config.py          ✅ Settings, read from SMARTFLOW_* environment variables and .env
 ├── log_config.py      ✅ structlog setup (plain console / JSON) and the access log
 ├── handlers/          🚧 HTTP layer (health endpoint ✅, feature endpoints 🚧)
 ├── services/          🚧 Business rules
 ├── storage/
-│   └── database.py    ✅ Async engine, session factory, startup connection check
+│   └── database.py    ✅ Async engine, session factory, startup connection check, table creation
 └── models/            ✅ Feedback, Comment, Notation tables (see §5)
 tests/                 ✅ pytest suite (logging ✅, API / services / storage 🚧)
 .github/workflows/     ✅ CI: lint, formatting, tests
@@ -207,9 +207,10 @@ sequenceDiagram
 2. Configure **logging**, first, so that everything after it is formatted consistently.
 3. Create the async **engine** (this does not connect yet).
 4. **Connection check**: open one connection and run `SELECT 1`. If the database is unreachable or the credentials are wrong, the process stops here with a logged error instead of starting and failing on the first request ("fail fast").
-5. Create the **session factory** and build the **Tornado application** with it.
-6. Listen on the configured host and port.
-7. On shutdown (Ctrl+C), **dispose** of the engine so pooled connections are closed cleanly.
+5. **Create missing tables** (`Base.metadata.create_all`). Tables that already exist are left unchanged.
+6. Create the **session factory** and build the **Tornado application** with it.
+7. Listen on the configured host and port.
+8. On shutdown (Ctrl+C), **dispose** of the engine so pooled connections are closed cleanly.
 
 ### 7.2 Configuration ✅
 
@@ -280,4 +281,4 @@ Tests never use the Neon databases. CI runs linting (ruff), formatting checks an
 ## 11. Known limitations and future work
 
 - **No authentication.** Identity comes from a header the client controls. Next step: JWT (PyJWT) with a `users` table; only the identity-reading code in the handlers' base class would change.
-- **No schema migrations.** Tables are created with `Base.metadata.create_all`, which creates missing tables but never alters existing ones. Before any schema change on a database that holds data (for example the Part 2 columns), versioned migrations with **Alembic** should be introduced.
+- **No schema migrations.** Tables are created with `Base.metadata.create_all` on every server start, which creates missing tables but never alters existing ones. A table that already exists with an older shape (for example, missing a column added to the model later) is skipped **silently**: startup succeeds and the first query using the new column fails. During development, the workaround is to drop the tables on the dev branch and restart. Before any schema change on a database that holds data (for example the Part 2 columns), versioned migrations with **Alembic** should be introduced.
