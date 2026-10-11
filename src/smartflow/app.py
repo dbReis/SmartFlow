@@ -14,12 +14,14 @@ def make_app(
     from smartflow.handlers.comments import CommentsHandler
     from smartflow.handlers.feedback import FeedbackHandler
     from smartflow.handlers.health import HealthHandler
+    from smartflow.handlers.notation import NotationHandler
 
     deps = {"session_maker": session_maker}
     routes = [
         (r"/api/health", HealthHandler),
         (r"/api/feedback", FeedbackHandler, deps),
         (r"/api/feedback/(\d{1,9})/comments", CommentsHandler, deps),
+        (r"/api/comments/(\d{1,9})/notation", NotationHandler, deps),
     ]
     log.debug("routes_registered", paths=[route[0] for route in routes])
     return Application(
