@@ -9,12 +9,22 @@ from tornado.web import HTTPError, RequestHandler
 log = structlog.get_logger(__name__)
 
 
+def _field(error: Any) -> str:
+    return ".".join(str(part) for part in error["loc"])
+
+
+def _validation_message(errors: list[Any]) -> str:
+    return "; ".join(
+        f"{_field(e)}: {e['msg']}" if e["loc"] else "Request body must be a JSON object"
+        for e in errors
+    )
+
+
 class BaseHandler(RequestHandler):
     """Parent of every API handler: JSON in, JSON out, JSON errors."""
 
     def initialize(self, session_maker: async_sessionmaker[AsyncSession]) -> None:
         self.session_maker = session_maker
-        self._validation_errors: list[dict[str, Any]] | None = None
 
     def set_default_headers(self) -> None:
         self.set_header("Content-Type", "application/json; charset=utf-8")
@@ -31,7 +41,8 @@ class BaseHandler(RequestHandler):
     def parse_body[T: BaseModel](self, schema: type[T]) -> T:
         """Request bytes → JSON → validated schema object.
 
-        Broken JSON → 400. Valid JSON with invalid values → 422 with details.
+        Broken JSON → 400. Valid JSON with invalid values → 422, with a message
+        naming each invalid field (e.g. "rating: Input should be 1, 2, 3, 4 or 5").
         """
         try:
             data = json.loads(self.request.body)
@@ -44,18 +55,14 @@ class BaseHandler(RequestHandler):
         try:
             parsed = schema.model_validate(data)
         except ValidationError as exc:
-            # exc.json() makes every detail JSON-safe before it reaches the response.
-            self._validation_errors = json.loads(exc.json(include_url=False))
+            errors = exc.errors(include_url=False)
             # Field and error type only: the submitted values may be personal data.
             log.info(
                 "request_validation_failed",
                 schema=schema.__name__,
-                errors=[
-                    {"field": ".".join(map(str, e["loc"])), "type": e["type"]}
-                    for e in self._validation_errors
-                ],
+                errors=[{"field": _field(e), "type": e["type"]} for e in errors],
             )
-            raise HTTPError(422, reason="Validation failed") from None
+            raise HTTPError(422, reason=_validation_message(errors)) from None
 
         log.debug("request_body_parsed", schema=schema.__name__)
         return parsed
@@ -66,14 +73,4 @@ class BaseHandler(RequestHandler):
         Unexpected exceptions only expose the generic reason ("Internal Server
         Error"); the traceback goes to the logs, never to the client.
         """
-        error: dict[str, Any] = {"code": status_code, "message": self._reason}
-        if status_code == 422 and self._validation_errors:
-            error["details"] = self._validation_errors
-        self.finish({"error": error})
-
-
-class NotFoundHandler(BaseHandler):
-    """Used for every URL that matches no route, so unknown paths get JSON too."""
-
-    def prepare(self) -> None:
-        raise HTTPError(404, reason="Not found")
+        self.finish({"error": {"code": status_code, "message": self._reason}})
