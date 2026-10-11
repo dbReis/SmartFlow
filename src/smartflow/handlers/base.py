@@ -70,3 +70,10 @@ class BaseHandler(RequestHandler):
         if status_code == 422 and self._validation_errors:
             error["details"] = self._validation_errors
         self.finish({"error": error})
+
+
+class NotFoundHandler(BaseHandler):
+    """Used for every URL that matches no route, so unknown paths get JSON too."""
+
+    def prepare(self) -> None:
+        raise HTTPError(404, reason="Not found")
