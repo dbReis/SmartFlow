@@ -13,9 +13,13 @@ class FeedbackRepository:
         self.session = session
 
     async def add_feedback(self, rating: int, note: str | None = None) -> Feedback:
+        log.debug("creating_feedback")
         feedback = Feedback(rating=rating, note=note)
         self.session.add(feedback)
         # Send the INSERT now (inside the open transaction) so feedback.id is set.
         await self.session.flush()
         log.debug("feedback_inserted", feedback_id=feedback.id)
         return feedback
+
+    async def get_feedback(self, feedback_id: int) -> Feedback | None:
+        return await self.session.get(Feedback, feedback_id)
