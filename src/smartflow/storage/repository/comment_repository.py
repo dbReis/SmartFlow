@@ -19,3 +19,6 @@ class CommentRepository:
         await self.session.flush()
         log.debug("comment_inserted", comment_id=comment_obj.id)
         return comment_obj
+
+    async def get_comment(self, comment_id: int) -> Comment | None:
+        return await self.session.get(Comment, comment_id)
