@@ -1,3 +1,5 @@
+import time
+
 import structlog
 from sqlalchemy import text
 from sqlalchemy.ext.asyncio import (
@@ -25,6 +27,13 @@ def create_engine(settings: Settings) -> AsyncEngine:
             "timeout": 10,  # Fail after 10 s instead of asyncpg's default 60 s
         },
     )
+    log.debug(
+        "database_engine_created",
+        host=engine.url.host,
+        database=engine.url.database,
+        pool_size=engine.pool.size(),
+        echo=settings.db_echo,
+    )
     return engine
 
 
@@ -33,31 +42,30 @@ def create_session_factory(engine: AsyncEngine) -> async_sessionmaker[AsyncSessi
 
 
 async def check_connection(engine: AsyncEngine) -> None:
-    log.debug(
-        "Checking database connection", host=engine.url.host, port=engine.url.port
-    )
+    log.debug("database_connection_checking", host=engine.url.host)
+    started = time.perf_counter()
     try:
         async with engine.connect() as conn:
             await conn.scalar(text("SELECT 1"))
-        log.info(
-            "Database connection check successful",
-            host=engine.url.host,
-            port=engine.url.port,
-        )
     except Exception as exc:
         log.error(
-            "Database connection check failed",
+            "database_connection_failed",
             host=engine.url.host,
-            port=engine.url.port,
             error=type(exc).__name__,
         )
-
         raise
+    log.info(
+        "database_connected",
+        host=engine.url.host,
+        database=engine.url.database,
+        # The first connection after idle includes Neon waking the branch up.
+        ms=round((time.perf_counter() - started) * 1000),
+    )
 
 
 async def create_tables(engine: AsyncEngine) -> None:
     """Create missing tables. Existing tables are left unchanged (no migrations)."""
-    log.debug("Creating database tables", tables=list(Base.metadata.tables))
+    log.debug("tables_creating", tables=list(Base.metadata.tables))
     try:
         # One transaction: on any error, no table is left half-created.
         async with engine.begin() as conn:
