@@ -1,9 +1,16 @@
-from enum import IntEnum
+from enum import IntEnum, StrEnum
 
 from sqlalchemy import CheckConstraint, ForeignKey, SmallInteger, Text
 from sqlalchemy.orm import Mapped, mapped_column
 
 from smartflow.models.base import Base
+
+
+class FeedbackStatus(StrEnum):
+    OPEN = "open"
+    CLOSED_BACKLOG = "closed_backlog"
+    CLOSED_SOLVED = "closed_solved"
+    CLOSED_REJECTED = "closed_rejected"
 
 
 class RatingValue(IntEnum):
@@ -16,6 +23,7 @@ class RatingValue(IntEnum):
 
 # Built from the enum so the allowed values are defined in one place: "1, 2, 3, 4, 5"
 _ALLOWED_VALUES = ", ".join(str(value.value) for value in RatingValue)
+_ALLOWED_STATUS_VALUES = ", ".join(f"'{value}'" for value in FeedbackStatus)
 
 
 class Feedback(Base):
@@ -23,6 +31,7 @@ class Feedback(Base):
     __table_args__ = (
         # Stored as a number (not a PostgreSQL ENUM) so ratings can be averaged: AVG(rating).
         CheckConstraint(f"rating IN ({_ALLOWED_VALUES})", name="rating_value"),
+        CheckConstraint(f"status in ({_ALLOWED_STATUS_VALUES})", name="status_value"),
     )
 
     id: Mapped[int] = mapped_column(primary_key=True)
@@ -31,3 +40,4 @@ class Feedback(Base):
     category_id: Mapped[int | None] = mapped_column(
         ForeignKey("category.id", ondelete="SET NULL"), index=True
     )
+    status: Mapped[str] = mapped_column(Text)
