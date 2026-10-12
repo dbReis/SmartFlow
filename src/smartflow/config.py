@@ -1,3 +1,4 @@
+from pydantic import SecretStr
 from pydantic_settings import BaseSettings, SettingsConfigDict
 
 from smartflow.log_config import LogFormat
@@ -15,6 +16,7 @@ class Settings(BaseSettings):
     debug: bool = False
     log_level: str = "DEBUG"
     log_format: LogFormat = "console"
+    pm_api_key: SecretStr | None = None
 
 
 def get_settings() -> Settings:
