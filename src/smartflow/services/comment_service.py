@@ -16,7 +16,7 @@ async def create_comment(
     # Check first, so a missing feedback is a clear 404 instead of a
     # foreign-key violation from the database (which would surface as a 500).
     if await FeedbackRepository(session).get_feedback(feedback_id) is None:
-        log.info("comment_feedback_not_found", feedback_id=feedback_id)
+        log.info("feedback_not_found", feedback_id=feedback_id)
         raise FeedbackNotFoundError(feedback_id)
 
     comment = await CommentRepository(session).add_comment(
