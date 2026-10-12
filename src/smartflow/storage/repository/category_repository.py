@@ -18,3 +18,6 @@ class CategoryRepository:
         await self.session.flush()
         log.debug("category_inserted", category_id=category.id)
         return category
+
+    async def get_category(self, category_id: int) -> Category | None:
+        return await self.session.get(Category, category_id)
