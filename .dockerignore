@@ -1,0 +1,13 @@
+# Only pyproject.toml, uv.lock, README.md and src/ are needed to build the image.
+.env
+.git
+.github
+.devcontainer
+.venv
+**/__pycache__
+.pytest_cache
+.ruff_cache
+site
+tests
+*.md
+!README.md
