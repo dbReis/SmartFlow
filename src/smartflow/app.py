@@ -14,7 +14,11 @@ def make_app(
 ) -> Application:
     from smartflow.handlers.comments import CommentsHandler
     from smartflow.handlers.docs import OpenAPIHandler, SwaggerUIHandler
-    from smartflow.handlers.feedback import FeedbackCategoryHandler, FeedbackHandler
+    from smartflow.handlers.feedback import (
+        FeedbackCategoryHandler,
+        FeedbackHandler,
+        FeedbackStatusHandler,
+    )
     from smartflow.handlers.health import HealthHandler
     from smartflow.handlers.notation import NotationHandler
 
@@ -26,6 +30,7 @@ def make_app(
         (r"/api/feedback/(\d{1,9})/comments", CommentsHandler, deps),
         (r"/api/comments/(\d{1,9})/notation", NotationHandler, deps),
         (r"/api/feedback/(\d{1,9})/category", FeedbackCategoryHandler, pm_deps),
+        (r"/api/feedback/(\d{1,9})/status", FeedbackStatusHandler, pm_deps),
         (r"/api/category", CategoryHandler, pm_deps),
         (r"/docs/?", SwaggerUIHandler),
         (r"/openapi.json", OpenAPIHandler),
