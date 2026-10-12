@@ -1,4 +1,5 @@
 import structlog
+from sqlalchemy import update
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from smartflow.models.comment import Comment
@@ -22,3 +23,17 @@ class CommentRepository:
 
     async def get_comment(self, comment_id: int) -> Comment | None:
         return await self.session.get(Comment, comment_id)
+
+    async def move_comments(self, from_feedback_id: int, to_feedback_id: int) -> int:
+        result = await self.session.execute(
+            update(Comment)
+            .where(Comment.feedback_id == from_feedback_id)
+            .values(feedback_id=to_feedback_id)
+        )
+        log.debug(
+            "comments_moved",
+            from_feedback_id=from_feedback_id,
+            to_feedback_id=to_feedback_id,
+            count=result.rowcount,
+        )
+        return result.rowcount
