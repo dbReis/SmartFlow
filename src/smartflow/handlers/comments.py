@@ -3,7 +3,7 @@ from tornado.web import HTTPError
 from smartflow.handlers.base import BaseHandler
 from smartflow.schemas.comment import CommentCreate, CommentOut
 from smartflow.services.comment_service import create_comment
-from smartflow.services.errors import FeedbackNotFoundError
+from smartflow.services.errors import FeedbackAlreadyMergedError, FeedbackNotFoundError
 
 
 class CommentsHandler(BaseHandler):
@@ -17,6 +17,10 @@ class CommentsHandler(BaseHandler):
                 comment = await create_comment(session, int(feedback_id), data)
         except FeedbackNotFoundError:
             raise HTTPError(404, reason="Feedback not found") from None
+        except FeedbackAlreadyMergedError:
+            raise HTTPError(
+                409, reason="Feedback was merged and is read-only"
+            ) from None
 
         self.set_status(201)
         self.set_header("Location", f"/api/feedback/{feedback_id}/comments")
