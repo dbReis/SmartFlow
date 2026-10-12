@@ -23,3 +23,10 @@ class FeedbackRepository:
 
     async def get_feedback(self, feedback_id: int) -> Feedback | None:
         return await self.session.get(Feedback, feedback_id)
+
+    async def set_category(self, feedback: Feedback, category_id: int) -> Feedback:
+        log.debug("setting_feedback_category")
+        feedback.category_id = category_id
+        await self.session.flush()
+        log.debug("setting_feedback_category_updated")
+        return feedback
