@@ -1,6 +1,6 @@
 from enum import IntEnum, StrEnum
 
-from sqlalchemy import CheckConstraint, ForeignKey, SmallInteger, Text
+from sqlalchemy import CheckConstraint, ForeignKey, SmallInteger, String, Text
 from sqlalchemy.orm import Mapped, mapped_column
 
 from smartflow.models.base import Base
@@ -40,4 +40,6 @@ class Feedback(Base):
     category_id: Mapped[int | None] = mapped_column(
         ForeignKey("category.id", ondelete="SET NULL"), index=True
     )
-    status: Mapped[str] = mapped_column(Text)
+    status: Mapped[str] = mapped_column(
+        String(20), server_default=FeedbackStatus.OPEN.value
+    )
