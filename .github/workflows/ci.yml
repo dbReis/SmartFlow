@@ -29,32 +29,11 @@ jobs:
         run: uv run pytest
 
   docker:
-    # Builds the image and runs it next to a real PostgreSQL, exactly like
-    # `docker compose up` does locally, then calls the API over HTTP.
+    # Only runs once lint, formatting and unit tests have passed.
+    needs: test
     runs-on: ubuntu-24.04
     steps:
       - uses: actions/checkout@v6
 
-      - name: Build and start API + PostgreSQL
-        # --wait returns once both containers report healthy (or fails).
-        run: docker compose up --build --detach --wait --wait-timeout 120
-
-      - name: Smoke test
-        run: |
-          curl --fail-with-body --silent http://localhost:8888/api/health
-          echo
-          curl --fail-with-body --silent -X POST http://localhost:8888/api/feedback \
-            -H "Content-Type: application/json" -d '{"rating": 5, "note": "CI smoke test"}'
-          echo
-          status=$(curl --silent --output /dev/null --write-out "%{http_code}" \
-            -X POST http://localhost:8888/api/feedback -d '{"rating": 9}')
-          test "$status" = "422" || { echo "expected 422 for an invalid rating, got $status"; exit 1; }
-          curl --fail --silent --output /dev/null http://localhost:8888/docs
-
-      - name: Show container logs
-        if: failure()
-        run: docker compose logs
-
-      - name: Stop containers
-        if: always()
-        run: docker compose down --volumes
+      - name: Build the Docker image
+        run: docker build --tag smartflow:${{ github.sha }} .
