@@ -17,6 +17,7 @@ def make_app(
     from smartflow.handlers.feedback import (
         FeedbackCategoryHandler,
         FeedbackHandler,
+        FeedbackMergeHandler,
         FeedbackStatusHandler,
     )
     from smartflow.handlers.health import HealthHandler
@@ -31,6 +32,7 @@ def make_app(
         (r"/api/comments/(\d{1,9})/notation", NotationHandler, deps),
         (r"/api/feedback/(\d{1,9})/category", FeedbackCategoryHandler, pm_deps),
         (r"/api/feedback/(\d{1,9})/status", FeedbackStatusHandler, pm_deps),
+        (r"/api/feedback/(\d{1,9})/merge", FeedbackMergeHandler, pm_deps),
         (r"/api/category", CategoryHandler, pm_deps),
         (r"/docs/?", SwaggerUIHandler),
         (r"/openapi.json", OpenAPIHandler),
