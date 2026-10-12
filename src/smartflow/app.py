@@ -3,6 +3,7 @@ from sqlalchemy.ext.asyncio import AsyncSession, async_sessionmaker
 from tornado.web import Application
 
 from smartflow.config import Settings
+from smartflow.handlers.category import CategoryHandler
 from smartflow.log_config import log_request
 
 log = structlog.get_logger(__name__)
@@ -18,12 +19,13 @@ def make_app(
     from smartflow.handlers.notation import NotationHandler
 
     deps = {"session_maker": session_maker}
-    # pm_deps = {**deps, "pm_api_key": settings.pm_api_key} to be used later in PM endpoints
+    pm_deps = {**deps, "pm_api_key": settings.pm_api_key}
     routes = [
         (r"/api/health", HealthHandler),
         (r"/api/feedback", FeedbackHandler, deps),
         (r"/api/feedback/(\d{1,9})/comments", CommentsHandler, deps),
         (r"/api/comments/(\d{1,9})/notation", NotationHandler, deps),
+        (r"/api/category", CategoryHandler, pm_deps),
         (r"/docs/?", SwaggerUIHandler),
         (r"/openapi.json", OpenAPIHandler),
     ]
