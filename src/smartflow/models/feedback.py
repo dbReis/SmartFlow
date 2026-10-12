@@ -43,3 +43,6 @@ class Feedback(Base):
     status: Mapped[str] = mapped_column(
         String(20), server_default=FeedbackStatus.OPEN.value
     )
+    merged_into_id: Mapped[int | None] = mapped_column(
+        ForeignKey("feedback.id", ondelete="SET NULL"), index=True
+    )
