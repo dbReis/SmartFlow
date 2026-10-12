@@ -7,9 +7,14 @@ from smartflow.schemas.feedback import (
     FeedbackCategoryOut,
     FeedbackCreate,
     FeedbackOut,
+    FeedbackStatusCreate,
 )
 from smartflow.services.errors import CategoryNotFoundError, FeedbackNotFoundError
-from smartflow.services.feedback_service import add_to_category, create_feedback
+from smartflow.services.feedback_service import (
+    add_to_category,
+    create_feedback,
+    update_status,
+)
 
 
 class FeedbackHandler(BaseHandler):
@@ -39,3 +44,17 @@ class FeedbackCategoryHandler(PMHandler):
         self.finish(
             FeedbackCategoryOut.model_validate(feedback).model_dump(mode="json")
         )
+
+
+class FeedbackStatusHandler(PMHandler):
+    async def put(self, feedback_id: str):
+        data = self.parse_body(FeedbackStatusCreate)
+        try:
+            async with self.session_maker.begin() as session:
+                feedback = await update_status(session, int(feedback_id), data)
+        except FeedbackNotFoundError:
+            raise HTTPError(404, reason="Feedback not found") from None
+
+        self.set_status(200)
+        self.set_header("Location", f"/api/feedback/{feedback.id}/status")
+        self.finish(FeedbackOut.model_validate(feedback).model_dump(mode="json"))
