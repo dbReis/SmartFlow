@@ -2,7 +2,11 @@ import structlog
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from smartflow.models.feedback import Feedback
-from smartflow.schemas.feedback import FeedbackCategory, FeedbackCreate
+from smartflow.schemas.feedback import (
+    FeedbackCategory,
+    FeedbackCreate,
+    FeedbackStatusCreate,
+)
 from smartflow.services.errors import CategoryNotFoundError, FeedbackNotFoundError
 from smartflow.storage.repository.category_repository import CategoryRepository
 from smartflow.storage.repository.feedback_repository import FeedbackRepository
@@ -41,5 +45,24 @@ async def add_to_category(
         "feedback_categorised",
         feedback_id=feedback_id,
         category_id=feedback.category_id,
+    )
+    return feedback
+
+
+async def update_status(
+    session: AsyncSession, feedback_id: int, data: FeedbackStatusCreate
+) -> Feedback:
+    feedback_repository = FeedbackRepository(session)
+    feedback = await feedback_repository.get_feedback(feedback_id)
+    if await feedback_repository.get_feedback(feedback_id) is None:
+        log.info("feedback_not_found", feedback_id=feedback_id)
+        raise FeedbackNotFoundError(feedback_id)
+
+    feedback = await feedback_repository.update_status(feedback, data.status)
+    log.info(
+        "feedback_categorised",
+        feedback_id=feedback_id,
+        category_id=feedback.category_id,
+        status=feedback.status,
     )
     return feedback
