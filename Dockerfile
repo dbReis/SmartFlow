@@ -22,6 +22,7 @@ COPY pyproject.toml uv.lock ./
 RUN uv sync --locked --no-dev --no-install-project
 
 # Then the app itself, installed as a regular (non-editable) package.
+COPY README.md ./
 COPY src ./src
 RUN uv sync --locked --no-dev --no-editable
 
