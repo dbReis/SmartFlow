@@ -18,6 +18,7 @@ def make_app(
     from smartflow.handlers.notation import NotationHandler
 
     deps = {"session_maker": session_maker}
+    # pm_deps = {**deps, "pm_api_key": settings.pm_api_key} to be used later in PM endpoints
     routes = [
         (r"/api/health", HealthHandler),
         (r"/api/feedback", FeedbackHandler, deps),
