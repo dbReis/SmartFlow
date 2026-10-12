@@ -19,3 +19,9 @@ async def create_feedback(session: AsyncSession, data: FeedbackCreate) -> Feedba
         has_note=feedback.note is not None,
     )
     return feedback
+
+
+async def add_to_category(
+    session: AsyncSession, category_id: str, data: Feedback
+) -> Feedback:
+    pass
