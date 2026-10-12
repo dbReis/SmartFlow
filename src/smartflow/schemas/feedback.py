@@ -1,6 +1,6 @@
 from pydantic import BaseModel, ConfigDict, Field
 
-from smartflow.models.feedback import RatingValue
+from smartflow.models.feedback import FeedbackStatus, RatingValue
 
 
 class FeedbackCreate(BaseModel):
@@ -19,6 +19,7 @@ class FeedbackOut(BaseModel):
     id: int
     rating: int
     note: str | None
+    status: str
 
 
 class FeedbackCategory(BaseModel):
@@ -30,3 +31,8 @@ class FeedbackCategoryOut(BaseModel):
     model_config = ConfigDict(from_attributes=True)
     id: int
     category_id: int
+
+
+class FeedbackStatusCreate(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+    status: FeedbackStatus
