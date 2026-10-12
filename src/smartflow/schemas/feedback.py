@@ -19,3 +19,14 @@ class FeedbackOut(BaseModel):
     id: int
     rating: int
     note: str | None
+
+
+class FeedbackCategory(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+    category_id: int
+
+
+class FeedbackCategoryOut(BaseModel):
+    model_config = ConfigDict(from_attributes=True)
+    id: int
+    category_id: int

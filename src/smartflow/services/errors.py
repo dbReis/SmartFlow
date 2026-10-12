@@ -15,3 +15,9 @@ class CommentNotFoundError(Exception):
     def __init__(self, comment_id: int) -> None:
         super().__init__(f"Comment {comment_id} not found")
         self.comment_id = comment_id
+
+
+class CategoryNotFoundError(Exception):
+    def __init__(self, category_id: int) -> None:
+        super().__init__(f"Feedback {category_id} not found")
+        self.feedback_id = category_id
