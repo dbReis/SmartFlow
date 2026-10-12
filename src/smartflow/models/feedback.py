@@ -1,6 +1,6 @@
 from enum import IntEnum
 
-from sqlalchemy import CheckConstraint, SmallInteger, Text
+from sqlalchemy import CheckConstraint, ForeignKey, SmallInteger, Text
 from sqlalchemy.orm import Mapped, mapped_column
 
 from smartflow.models.base import Base
@@ -28,3 +28,6 @@ class Feedback(Base):
     id: Mapped[int] = mapped_column(primary_key=True)
     note: Mapped[str | None] = mapped_column(Text)
     rating: Mapped[int] = mapped_column(SmallInteger)
+    category_id: Mapped[int] = mapped_column(
+        ForeignKey("category.id", ondelete="CASCADE"), index=True
+    )
