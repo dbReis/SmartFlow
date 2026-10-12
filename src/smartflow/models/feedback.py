@@ -29,5 +29,5 @@ class Feedback(Base):
     note: Mapped[str | None] = mapped_column(Text)
     rating: Mapped[int] = mapped_column(SmallInteger)
     category_id: Mapped[int | None] = mapped_column(
-        ForeignKey("category.id", ondelete="CASCADE"), index=True
+        ForeignKey("category.id", ondelete="SET NULL"), index=True
     )
