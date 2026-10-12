@@ -13,6 +13,23 @@ class FeedbackCreate(BaseModel):
     )
 
 
+class FeedbackStatusCreate(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+    status: FeedbackStatus
+
+
+class FeedbackCategoryCreate(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+    # Required key; null removes the feedback from its category.
+    category_id: int | None
+
+
+class FeedbackMergeCreate(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+    target_id: int = Field(description="The feedback that receives the comments")
+
+
+###### OUT #####
 class FeedbackOut(BaseModel):
     # from_attributes: build it from a SQLAlchemy Feedback object, not only a dict
     model_config = ConfigDict(from_attributes=True)
@@ -20,19 +37,5 @@ class FeedbackOut(BaseModel):
     rating: int
     note: str | None
     status: str
-
-
-class FeedbackCategory(BaseModel):
-    model_config = ConfigDict(extra="forbid")
-    category_id: int
-
-
-class FeedbackCategoryOut(BaseModel):
-    model_config = ConfigDict(from_attributes=True)
-    id: int
-    category_id: int
-
-
-class FeedbackStatusCreate(BaseModel):
-    model_config = ConfigDict(extra="forbid")
-    status: FeedbackStatus
+    category_id: int | None
+    merged_into_id: int | None
