@@ -9,7 +9,7 @@ class Settings(BaseSettings):
     # from the .env file, then falls back to the default below.
     model_config = SettingsConfigDict(env_prefix="SMARTFLOW_", env_file=".env")
 
-    database_url: str  # postgresql+asyncpg://user:password@host/dbname (required)
+    database_url: str
     db_echo: bool = False
     host: str = "0.0.0.0"
     port: int = 8888
