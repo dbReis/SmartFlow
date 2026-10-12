@@ -30,3 +30,10 @@ class FeedbackRepository:
         await self.session.flush()
         log.debug("setting_feedback_category_updated")
         return feedback
+
+    async def update_status(self, feedback: Feedback, status: str) -> Feedback:
+        log.debug("setting_status")
+        feedback.status = status
+        await self.session.flush()
+        log.debug("status_updated")
+        return feedback
