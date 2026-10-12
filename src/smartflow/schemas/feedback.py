@@ -19,4 +19,3 @@ class FeedbackOut(BaseModel):
     id: int
     rating: int
     note: str | None
-    category_id: int

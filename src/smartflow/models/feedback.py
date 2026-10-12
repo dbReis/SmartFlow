@@ -28,6 +28,6 @@ class Feedback(Base):
     id: Mapped[int] = mapped_column(primary_key=True)
     note: Mapped[str | None] = mapped_column(Text)
     rating: Mapped[int] = mapped_column(SmallInteger)
-    category_id: Mapped[int] = mapped_column(
+    category_id: Mapped[int | None] = mapped_column(
         ForeignKey("category.id", ondelete="CASCADE"), index=True
     )
