@@ -65,6 +65,8 @@ RUN apt-get update \
 # Provides "ps", "top", "kill" etc.; VS Code's server uses them to manage
 # its processes inside the container.
         procps \
+# "psql", to look inside the test database (psql -h db -U smartflow smartflow_test).
+        postgresql-client \
 # Delete the package index downloaded by "apt-get update" (~20 MB) since
 # it's not needed after installing.
     && rm -rf /var/lib/apt/lists/*
