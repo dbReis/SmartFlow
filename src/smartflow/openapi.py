@@ -19,6 +19,7 @@ from smartflow.schemas.error import ErrorOut
 from smartflow.schemas.feedback import (
     FeedbackCategoryCreate,
     FeedbackCreate,
+    FeedbackListOut,
     FeedbackMergeCreate,
     FeedbackOut,
     FeedbackStatusCreate,
@@ -34,7 +35,14 @@ _REQUEST_SCHEMAS = [
     FeedbackMergeCreate,
     CategoryCreate,
 ]
-_RESPONSE_SCHEMAS = [FeedbackOut, CommentOut, NotationOut, CategoryOut, ErrorOut]
+_RESPONSE_SCHEMAS = [
+    FeedbackOut,
+    FeedbackListOut,
+    CommentOut,
+    NotationOut,
+    CategoryOut,
+    ErrorOut,
+]
 
 _ERRORS = {
     400: "The body is not valid JSON",
@@ -47,7 +55,7 @@ _ERRORS = {
 
 # The tags group operations in Swagger UI, in this order.
 _TAGS = [
-    {"name": "feedback", "description": "Post feedback"},
+    {"name": "feedback", "description": "Browse and post feedback"},
     {"name": "comments", "description": "Discuss a feedback"},
     {"name": "notations", "description": "Rate comments (-1, 0, +1)"},
     {
@@ -127,6 +135,32 @@ def _operation(
     return operation
 
 
+def _get(
+    summary: str,
+    tag: str,
+    out: type[BaseModel],
+    errors: list[int] | None = None,
+    params: list[dict[str, Any]] | None = None,
+) -> dict[str, Any]:
+    """A read operation: no body, 200 with JSON, or a JSON error."""
+    responses: dict[str, Any] = {
+        "200": {"description": "OK", "content": _json(_ref(out))}
+    }
+    for code in errors or []:
+        responses[str(code)] = {
+            "description": _ERRORS[code],
+            "content": _json(_ref(ErrorOut)),
+        }
+    operation: dict[str, Any] = {
+        "summary": summary,
+        "tags": [tag],
+        "responses": responses,
+    }
+    if params:
+        operation["parameters"] = params
+    return operation
+
+
 def build_spec() -> dict[str, Any]:
     _, schemas = models_json_schema(
         [(model, "validation") for model in _REQUEST_SCHEMAS]
@@ -163,12 +197,26 @@ def build_spec() -> dict[str, Any]:
                 }
             },
             "/api/feedback": {
+                "get": _get(
+                    "List active feedback, newest first, with comment counts",
+                    "feedback",
+                    FeedbackListOut,
+                ),
                 "post": _operation(
                     "Post a feedback",
                     "feedback",
                     FeedbackCreate,
                     FeedbackOut,
                     [400, 422],
+                ),
+            },
+            "/api/feedback/{feedback_id}": {
+                "get": _get(
+                    "Get one feedback (merged ones too: see merged_into_id)",
+                    "feedback",
+                    FeedbackOut,
+                    [404],
+                    [_id_param("feedback_id", "The feedback to read")],
                 )
             },
             "/api/feedback/{feedback_id}/comments": {
