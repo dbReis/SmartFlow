@@ -23,7 +23,7 @@ def create_engine(settings: Settings) -> AsyncEngine:
         pool_recycle=3600,  # Recycle connections every hour
         pool_pre_ping=True,  # Neon's dev branch sleeps after ~5 min idle
         connect_args={
-            "ssl": True,  # Neon requires SSL connections
+            "ssl": settings.db_ssl,  # required by Neon, off for the test database
             "timeout": 10,  # Fail after 10 s instead of asyncpg's default 60 s
         },
     )
