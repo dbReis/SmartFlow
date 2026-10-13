@@ -19,6 +19,7 @@ def make_app(
     from smartflow.handlers.feedback import (
         FeedbackCategoryHandler,
         FeedbackHandler,
+        FeedbackItemHandler,
         FeedbackMergeHandler,
         FeedbackStatusHandler,
     )
@@ -30,6 +31,7 @@ def make_app(
     routes = [
         (r"/api/health", HealthHandler),
         (r"/api/feedback", FeedbackHandler, deps),
+        (r"/api/feedback/(\d{1,9})", FeedbackItemHandler, deps),
         (r"/api/feedback/(\d{1,9})/comments", CommentsHandler, deps),
         (r"/api/comments/(\d{1,9})/notation", NotationHandler, deps),
         (r"/api/feedback/(\d{1,9})/category", FeedbackCategoryHandler, pm_deps),
