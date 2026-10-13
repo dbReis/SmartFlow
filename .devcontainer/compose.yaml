@@ -23,6 +23,8 @@ services:
     depends_on:
       db:
         condition: service_healthy
+    ports:
+      - "8888:8888"
 
   db:
     # Same major version as Neon (PostgreSQL 18).
