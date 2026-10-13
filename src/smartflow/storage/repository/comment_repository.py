@@ -1,8 +1,9 @@
 import structlog
-from sqlalchemy import update
+from sqlalchemy import func, select, update
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from smartflow.models.comment import Comment
+from smartflow.models.notation import Notation
 
 log = structlog.get_logger(__name__)
 
@@ -23,6 +24,28 @@ class CommentRepository:
 
     async def get_comment(self, comment_id: int) -> Comment | None:
         return await self.session.get(Comment, comment_id)
+
+    async def list_for_feedback(
+        self, feedback_id: int
+    ) -> list[tuple[Comment, int, int]]:
+        """The comments of a feedback with (score, votes), best score first.
+
+        One query: notations are summed per comment with a LEFT JOIN, so
+        comments without any notation are included with score 0.
+        """
+        score = func.coalesce(func.sum(Notation.notation), 0)
+        votes = func.count(Notation.id)
+        statement = (
+            select(Comment, score, votes)
+            .outerjoin(Notation, Notation.comment_id == Comment.id)
+            .where(Comment.feedback_id == feedback_id)
+            .group_by(Comment.id)
+            # Ties: the older comment first, so the order is stable.
+            .order_by(score.desc(), Comment.id)
+        )
+        rows = (await self.session.execute(statement)).all()
+        log.debug("comments_listed", feedback_id=feedback_id, count=len(rows))
+        return [(comment, score, votes) for comment, score, votes in rows]
 
     async def move_comments(self, from_feedback_id: int, to_feedback_id: int) -> int:
         result = await self.session.execute(
