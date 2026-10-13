@@ -13,8 +13,8 @@ from typing import Any
 from pydantic import BaseModel
 from pydantic.json_schema import models_json_schema
 
-from smartflow.schemas.category import CategoryCreate, CategoryOut
-from smartflow.schemas.comment import CommentCreate, CommentOut
+from smartflow.schemas.category import CategoryCreate, CategoryListOut, CategoryOut
+from smartflow.schemas.comment import CommentCreate, CommentListOut, CommentOut
 from smartflow.schemas.error import ErrorOut
 from smartflow.schemas.feedback import (
     FeedbackCategoryCreate,
@@ -39,8 +39,10 @@ _RESPONSE_SCHEMAS = [
     FeedbackOut,
     FeedbackListOut,
     CommentOut,
+    CommentListOut,
     NotationOut,
     CategoryOut,
+    CategoryListOut,
     ErrorOut,
 ]
 
@@ -56,8 +58,9 @@ _ERRORS = {
 # The tags group operations in Swagger UI, in this order.
 _TAGS = [
     {"name": "feedback", "description": "Browse and post feedback"},
-    {"name": "comments", "description": "Discuss a feedback"},
+    {"name": "comments", "description": "Read and post the discussion of a feedback"},
     {"name": "notations", "description": "Rate comments (-1, 0, +1)"},
+    {"name": "categories", "description": "Categories feedback can be put in"},
     {
         "name": "Product Manager",
         "description": "Triage feedback. Requires the PM key: click Authorize.",
@@ -220,6 +223,13 @@ def build_spec() -> dict[str, Any]:
                 )
             },
             "/api/feedback/{feedback_id}/comments": {
+                "get": _get(
+                    "List the comments of a feedback, best score first",
+                    "comments",
+                    CommentListOut,
+                    [404],
+                    [_id_param("feedback_id", "The feedback whose comments to list")],
+                ),
                 "post": _operation(
                     "Comment on a feedback",
                     "comments",
@@ -227,7 +237,7 @@ def build_spec() -> dict[str, Any]:
                     CommentOut,
                     [400, 404, 409, 422],
                     [_id_param("feedback_id", "The feedback to comment on")],
-                )
+                ),
             },
             "/api/comments/{comment_id}/notation": {
                 "post": _operation(
@@ -275,7 +285,25 @@ def build_spec() -> dict[str, Any]:
                     pm=True,
                 )
             },
+            "/api/pm/session": {
+                "get": {
+                    "summary": "Check a PM key (204 if it is valid)",
+                    "tags": ["Product Manager"],
+                    "responses": {
+                        "204": {"description": "The key is valid"},
+                        **{
+                            str(code): {
+                                "description": _ERRORS[code],
+                                "content": _json(_ref(ErrorOut)),
+                            }
+                            for code in (401, 503)
+                        },
+                    },
+                    "security": [{_PM_KEY: []}],
+                }
+            },
             "/api/category": {
+                "get": _get("List all categories", "categories", CategoryListOut),
                 "post": _operation(
                     "Create a category",
                     "Product Manager",
@@ -283,7 +311,7 @@ def build_spec() -> dict[str, Any]:
                     CategoryOut,
                     [400, 422],
                     pm=True,
-                )
+                ),
             },
         },
         "components": {
