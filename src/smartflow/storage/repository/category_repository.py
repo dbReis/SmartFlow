@@ -1,4 +1,7 @@
+from collections.abc import Sequence
+
 import structlog
+from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from smartflow.models.category import Category
@@ -21,3 +24,7 @@ class CategoryRepository:
 
     async def get_category(self, category_id: int) -> Category | None:
         return await self.session.get(Category, category_id)
+
+    async def list_categories(self) -> Sequence[Category]:
+        result = await self.session.scalars(select(Category).order_by(Category.name))
+        return result.all()
