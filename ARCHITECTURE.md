@@ -15,7 +15,8 @@ SmartFlow is an asynchronous REST API that lets users of a web application give 
 | **Part 1, User feedback** (required) | Post feedback (rating 1–5, optional note) | ✅ |
 | | Comment on a feedback | ✅ |
 | | Give a notation (−1, 0, +1) to a comment | ✅ (one-per-user rule 🚧, see §2) |
-| | Browse feedback and their comments (`GET` endpoints) | 🚧 |
+| | Browse feedback (list and detail) | ✅ |
+| | Browse the comments of a feedback, by score | 🚧 |
 | **Part 2, Product Manager view** (optional) | Categorise feedback, set a status (open, closed backlog, closed solved, closed rejected), merge similar feedback | 🚧 |
 
 The goal is a **minimum viable product**: a small, correct, well-structured API rather than a large feature set.
@@ -88,7 +89,7 @@ src/smartflow/
 │   ├── base.py              ✅ BaseHandler: session injection, JSON body parsing, JSON errors
 │   ├── docs.py              ✅ GET /openapi.json (Swagger UI at /docs comes from swagger-ui-py)
 │   ├── health.py            ✅ GET /api/health
-│   ├── feedback.py          ✅ POST /api/feedback
+│   ├── feedback.py          ✅ GET/POST /api/feedback, GET /api/feedback/{id}, PM status/category/merge
 │   ├── comments.py          ✅ POST /api/feedback/{id}/comments
 │   └── notation.py          ✅ POST /api/comments/{id}/notation
 ├── schemas/                 ✅ feedback.py, comment.py, notation.py (…Create / …Out), error.py (error shape)
@@ -194,7 +195,8 @@ All requests and responses use JSON.
 | `POST` | `/api/feedback` | `{"rating": 1–5, "note": "…" (optional)}` | `201` + feedback | 400, 422 | ✅ |
 | `POST` | `/api/feedback/{feedback_id}/comments` | `{"comment": "…"}` | `201` + comment | 400, 404 (feedback), 422 | ✅ |
 | `POST` | `/api/comments/{comment_id}/notation` | `{"notation": -1, 0 or 1}` | `201` + notation | 400, 404 (comment), 422 | ✅ |
-| `GET` | `/api/feedback` | — | list of feedback | — | 🚧 |
+| `GET` | `/api/feedback` | — | `200 {"items": [...]}`: active feedback, newest first, each with `comment_count` (at most 100) | — | ✅ |
+| `GET` | `/api/feedback/{feedback_id}` | — | `200` + feedback (merged ones too: see `merged_into_id`) | 404 | ✅ |
 | `GET` | `/api/feedback/{feedback_id}/comments` | — | comments with their score | 404 | 🚧 |
 
 Successful `POST`s return **201 Created** with the created resource and a `Location` header. Resource ids in paths are matched with `\d{1,9}`: digits only, and small enough for a PostgreSQL `INTEGER`. Any other id matches no route and returns 404.
@@ -364,7 +366,8 @@ Tests never use the Neon databases. CI runs linting (ruff), formatting checks an
 
 - **No user identity yet.** Notations are not tied to a user, so the "one notation per user" and "no notation on one's own comment" rules are not enforced: any client can give any number of notations. Next step: read `X-User-Id` in `BaseHandler`, add `user_id` columns and `UNIQUE (comment_id, user_id)` on `notation`.
 - **No authentication.** Even with `X-User-Id`, identity would come from a header the client controls. A later step: JWT (PyJWT) with a `users` table; only the identity-reading code in `BaseHandler` would change.
-- **No read endpoints yet.** Feedback and comments can be created but not listed (`GET`), so the "browse" part of the assignment is still open.
+- **The comments of a feedback cannot be listed yet** (`GET /api/feedback/{id}/comments`).
+- **The feedback list is not paginated.** It returns at most the 100 newest active feedback. Add `limit`/`offset` (and filters such as status or category) before the data grows; the response is already an object (`{"items": [...]}`), so new fields will not break clients.
 - **No schema migrations.** Tables are created with `Base.metadata.create_all` on every server start, which creates missing tables but never alters existing ones. A table that already exists with an older shape (for example, missing a column added to the model later) is skipped **silently**: startup succeeds and the first query using the new column fails. During development, the workaround is to drop the affected tables on the dev branch and restart. Before any schema change on a database that holds data (for example the Part 2 columns), versioned migrations with **Alembic** should be introduced.
 - **Unknown URLs return Tornado's default HTML 404**, not the JSON error shape of §6.3. A catch-all handler (`default_handler_class`) extending `BaseHandler` would make every response JSON.
 - **No automated API tests yet.** They need the PostgreSQL test container (§10).
