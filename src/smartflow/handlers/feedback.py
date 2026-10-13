@@ -5,9 +5,11 @@ from smartflow.handlers.pm_base_handler import PMHandler
 from smartflow.schemas.feedback import (
     FeedbackCategoryCreate,
     FeedbackCreate,
+    FeedbackListOut,
     FeedbackMergeCreate,
     FeedbackOut,
     FeedbackStatusCreate,
+    FeedbackSummaryOut,
 )
 from smartflow.services.errors import (
     CannotMergeIntoItselfError,
@@ -18,6 +20,8 @@ from smartflow.services.errors import (
 from smartflow.services.feedback_service import (
     add_to_category,
     create_feedback,
+    get_feedback,
+    list_feedback,
     merge,
     update_status,
 )
@@ -31,6 +35,32 @@ class FeedbackHandler(BaseHandler):
 
         self.set_status(201)
         self.set_header("Location", f"/api/feedback/{feedback.id}")
+        self.finish(FeedbackOut.model_validate(feedback).model_dump(mode="json"))
+
+    async def get(self):
+        async with self.session_maker() as session:
+            rows = await list_feedback(session)
+
+        items = [
+            FeedbackSummaryOut(
+                **FeedbackOut.model_validate(feedback).model_dump(),
+                comment_count=comment_count,
+            )
+            for feedback, comment_count in rows
+        ]
+        self.finish(FeedbackListOut(items=items).model_dump(mode="json"))
+
+
+class FeedbackItemHandler(BaseHandler):
+    """/api/feedback/{feedback_id}: one feedback, merged ones included."""
+
+    async def get(self, feedback_id: str):
+        try:
+            async with self.session_maker() as session:
+                feedback = await get_feedback(session, int(feedback_id))
+        except FeedbackNotFoundError:
+            raise HTTPError(404, reason="Feedback not found") from None
+
         self.finish(FeedbackOut.model_validate(feedback).model_dump(mode="json"))
 
 
