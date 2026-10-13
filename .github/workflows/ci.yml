@@ -1,17 +1,7 @@
 name: CI
-
 on:
   push:
   workflow_dispatch:
-
-# Flow: lint and unit tests run in parallel (fast, no database); integration
-# tests only start once both pass; the Docker image is only built from code
-# that passed every test.
-#
-#   lint ──┐
-#          ├──► integration-tests ──► docker
-#   unit ──┘
-
 jobs:
   lint:
     runs-on: ubuntu-24.04
@@ -32,29 +22,22 @@ jobs:
 
       - name: Check formatting
         run: uv run ruff format --check .
-
   unit-tests:
     runs-on: ubuntu-24.04
     steps:
       - uses: actions/checkout@v6
-
       - name: Install uv
         uses: astral-sh/setup-uv@v7
         with:
           python-version: "3.12"
           enable-cache: true
-
       - name: Install dependencies
         run: uv sync --locked
-
       - name: Run unit tests
         run: uv run pytest tests/unit
-
   integration-tests:
     needs: [lint, unit-tests]
     runs-on: ubuntu-24.04
-    # Throwaway PostgreSQL for the integration tests, same as the dev
-    # container's "db" service.
     services:
       db:
         image: postgres:18-alpine
@@ -85,9 +68,7 @@ jobs:
 
       - name: Run integration tests
         run: uv run pytest tests/integration
-
   docker:
-    # Only build an image from code that passed every check and test.
     needs: integration-tests
     runs-on: ubuntu-24.04
     steps:
