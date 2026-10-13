@@ -1,0 +1,49 @@
+# =============================================================================
+# SmartFlow dev environment: two containers started together by VS Code.
+#   app  the container you work in (built from ./Dockerfile, as before)
+#   db   PostgreSQL, used by the test suite
+# Inside "app", the database is reachable at host "db", port 5432.
+# =============================================================================
+
+services:
+  app:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    # Keep the container running so VS Code can attach to it.
+    command: sleep infinity
+    volumes:
+      # The project folder on your machine, mounted where VS Code expects it.
+      - ..:/workspaces/SmartFlow:cached
+      - claude-config:/home/dev/.claude
+    environment:
+      # Database for the test suite. The app itself keeps using the URL in .env
+      # (Neon), so this does not change how `python -m smartflow` runs.
+      SMARTFLOW_TEST_DATABASE_URL: postgresql+asyncpg://smartflow:smartflow@db:5432/smartflow_test
+    depends_on:
+      db:
+        condition: service_healthy
+
+  db:
+    # Same major version as Neon (PostgreSQL 18).
+    image: postgres:18-alpine
+    environment:
+      POSTGRES_USER: smartflow
+      POSTGRES_PASSWORD: smartflow
+      POSTGRES_DB: smartflow_test
+    # Test data only: keep it in memory. Faster, and wiped whenever the
+    # container restarts (the tests create their own tables and rows anyway).
+    tmpfs:
+      - /var/lib/postgresql
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U smartflow -d smartflow_test"]
+      interval: 2s
+      timeout: 3s
+      retries: 15
+
+volumes:
+  claude-config:
+    # The volume the previous single-container setup created: reusing it keeps
+    # the Claude Code login and project memory. On another machine, Compose
+    # simply creates a new, empty volume with this name.
+    name: claude-config-0h3gjklnsdv8ctcsaj316jvl7ik2h1i3qrl9llmdtd54gg4fu3sl

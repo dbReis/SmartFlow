@@ -1,18 +1,16 @@
 {
   "name": "SmartFlow",
-  "build": {
-    "dockerfile": "Dockerfile",
-    "context": "."
-  },
+  // Two containers: "app" (this one, where VS Code runs) and "db" (PostgreSQL).
+  "dockerComposeFile": "compose.yaml",
+  "service": "app",
+  "workspaceFolder": "/workspaces/SmartFlow",
+  // Stop the database too when VS Code closes the dev container.
+  "shutdownAction": "stopCompose",
   "remoteUser": "dev",
   "forwardPorts": [8888],
   "portsAttributes": {
     "8888": { "label": "Tornado API" }
   },
-  // Keep Claude Code login and settings across container rebuilds
-  "mounts": [
-    "source=claude-config-${devcontainerId},target=/home/dev/.claude,type=volume"
-  ],
   "postCreateCommand": "if [ -f pyproject.toml ]; then uv sync; fi",
   "customizations": {
     "vscode": {
