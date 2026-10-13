@@ -1,10 +1,14 @@
 import structlog
-from sqlalchemy import update
+from sqlalchemy import func, select, update
 from sqlalchemy.ext.asyncio import AsyncSession
 
+from smartflow.models.comment import Comment
 from smartflow.models.feedback import Feedback
 
 log = structlog.get_logger(__name__)
+
+# No pagination yet: never return more than this many feedback in one list.
+LIST_LIMIT = 100
 
 
 class FeedbackRepository:
@@ -24,6 +28,20 @@ class FeedbackRepository:
 
     async def get_feedback(self, feedback_id: int) -> Feedback | None:
         return await self.session.get(Feedback, feedback_id)
+
+    async def list_feedback(self) -> list[tuple[Feedback, int]]:
+        comment_count = func.count(Comment.id)
+        statement = (
+            select(Feedback, comment_count)
+            .outerjoin(Comment, Comment.feedback_id == Feedback.id)
+            .where(Feedback.merged_into_id.is_(None))
+            .group_by(Feedback.id)
+            .order_by(Feedback.id.desc())
+            .limit(LIST_LIMIT)
+        )
+        rows = (await self.session.execute(statement)).all()
+        log.debug("feedback_listed", count=len(rows))
+        return [(feedback, count) for feedback, count in rows]
 
     async def set_category(
         self, feedback: Feedback, category_id: int | None
