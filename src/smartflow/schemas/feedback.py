@@ -39,3 +39,15 @@ class FeedbackOut(BaseModel):
     status: str
     category_id: int | None
     merged_into_id: int | None
+
+
+class FeedbackSummaryOut(FeedbackOut):
+    """A feedback as shown in a list: the feedback plus how many comments it has."""
+
+    comment_count: int
+
+
+class FeedbackListOut(BaseModel):
+    # An object rather than a bare list: pagination fields (limit, offset,
+    # total) can be added later without breaking clients.
+    items: list[FeedbackSummaryOut]
