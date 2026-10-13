@@ -14,7 +14,6 @@ log = structlog.get_logger(__name__)
 def make_app(
     settings: Settings, session_maker: async_sessionmaker[AsyncSession]
 ) -> Application:
-    from smartflow.handlers.base import NotFoundHandler
     from smartflow.handlers.comments import CommentsHandler
     from smartflow.handlers.docs import OpenAPIHandler
     from smartflow.handlers.feedback import (
@@ -47,7 +46,6 @@ def make_app(
     app = Application(
         routes,
         # Any URL that matches no route: a JSON 404 like every other error.
-        default_handler_class=NotFoundHandler,
         default_handler_args=deps,
         debug=settings.debug,
         log_function=log_request,
