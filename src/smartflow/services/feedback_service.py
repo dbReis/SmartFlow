@@ -34,6 +34,20 @@ async def create_feedback(session: AsyncSession, data: FeedbackCreate) -> Feedba
     return feedback
 
 
+async def list_feedback(session: AsyncSession) -> list[tuple[Feedback, int]]:
+    """Active feedback with comment counts, newest first."""
+    return await FeedbackRepository(session).list_feedback()
+
+
+async def get_feedback(session: AsyncSession, feedback_id: int) -> Feedback:
+    """Any feedback, merged ones included (reading a merged feedback is allowed)."""
+    feedback = await FeedbackRepository(session).get_feedback(feedback_id)
+    if feedback is None:
+        log.info("feedback_not_found", feedback_id=feedback_id)
+        raise FeedbackNotFoundError(feedback_id)
+    return feedback
+
+
 async def get_active_feedback(session: AsyncSession, feedback_id: int) -> Feedback:
     """Load a feedback that can still be changed.
 
