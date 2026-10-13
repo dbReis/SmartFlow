@@ -4,35 +4,61 @@ Request and response shapes come from the same schemas the handlers validate
 with, so the documentation cannot drift from the real rules. Only the paths are
 written here by hand.
 
-The running app serves it at /docs (Swagger UI) and /openapi.json. For GitHub
-Pages, write both files into a folder:  python -m smartflow.openapi site
+The running app serves it at /openapi.json, and Swagger UI at /docs.
 """
 
-import argparse
-import json
 from importlib.metadata import version
-from pathlib import Path
 from typing import Any
 
 from pydantic import BaseModel
 from pydantic.json_schema import models_json_schema
 
+from smartflow.schemas.category import CategoryCreate, CategoryOut
 from smartflow.schemas.comment import CommentCreate, CommentOut
 from smartflow.schemas.error import ErrorOut
-from smartflow.schemas.feedback import FeedbackCreate, FeedbackOut
+from smartflow.schemas.feedback import (
+    FeedbackCategoryCreate,
+    FeedbackCreate,
+    FeedbackMergeCreate,
+    FeedbackOut,
+    FeedbackStatusCreate,
+)
 from smartflow.schemas.notation import NotationCreate, NotationOut
 
-DEFAULT_SERVER_URL = "http://localhost:8888"
-SWAGGER_UI_VERSION = "5.33.1"
-
-_REQUEST_SCHEMAS = [FeedbackCreate, CommentCreate, NotationCreate]
-_RESPONSE_SCHEMAS = [FeedbackOut, CommentOut, NotationOut, ErrorOut]
+_REQUEST_SCHEMAS = [
+    FeedbackCreate,
+    CommentCreate,
+    NotationCreate,
+    FeedbackStatusCreate,
+    FeedbackCategoryCreate,
+    FeedbackMergeCreate,
+    CategoryCreate,
+]
+_RESPONSE_SCHEMAS = [FeedbackOut, CommentOut, NotationOut, CategoryOut, ErrorOut]
 
 _ERRORS = {
     400: "The body is not valid JSON",
+    401: "Missing or invalid PM key",
     404: "A referenced resource does not exist",
+    409: "The feedback was merged into another one and is read-only",
     422: "Valid JSON, but invalid or unknown fields",
+    503: "PM features are not configured on the server",
 }
+
+# The tags group operations in Swagger UI, in this order.
+_TAGS = [
+    {"name": "feedback", "description": "Post feedback"},
+    {"name": "comments", "description": "Discuss a feedback"},
+    {"name": "notations", "description": "Rate comments (-1, 0, +1)"},
+    {
+        "name": "Product Manager",
+        "description": "Triage feedback. Requires the PM key: click Authorize.",
+    },
+    {"name": "health", "description": "Service status"},
+]
+
+# Name of the security scheme for PM endpoints (Authorization: Bearer <key>).
+_PM_KEY = "pmKey"
 
 
 def _ref(model: type[BaseModel]) -> dict[str, str]:
@@ -54,28 +80,36 @@ def _id_param(name: str, description: str) -> dict[str, Any]:
     }
 
 
-def _create(
+def _operation(
     summary: str,
     tag: str,
     body: type[BaseModel],
     out: type[BaseModel],
     errors: list[int],
     params: list[dict[str, Any]] | None = None,
+    *,
+    created: bool = True,
+    pm: bool = False,
 ) -> dict[str, Any]:
-    """A POST that creates a resource: 201 + Location header, or a JSON error."""
-    responses: dict[str, Any] = {
-        "201": {
-            "description": "Created",
-            "headers": {
-                "Location": {
-                    "description": "URL of the created resource",
-                    "schema": {"type": "string"},
-                }
-            },
-            "content": _json(_ref(out)),
-        }
+    """One operation with a JSON body and a JSON response or JSON error.
+
+    created=True: 201 + Location header (a new resource); False: 200 (a change).
+    pm=True: requires the PM key, which adds the 401 and 503 errors.
+    """
+    success: dict[str, Any] = {
+        "description": "Created" if created else "OK",
+        "content": _json(_ref(out)),
     }
-    for code in errors:
+    if created:
+        success["headers"] = {
+            "Location": {
+                "description": "URL of the created resource",
+                "schema": {"type": "string"},
+            }
+        }
+    responses: dict[str, Any] = {"201" if created else "200": success}
+    error_codes = sorted({*errors, 401, 503} if pm else set(errors))
+    for code in error_codes:
         responses[str(code)] = {
             "description": _ERRORS[code],
             "content": _json(_ref(ErrorOut)),
@@ -88,10 +122,12 @@ def _create(
     }
     if params:
         operation["parameters"] = params
+    if pm:
+        operation["security"] = [{_PM_KEY: []}]
     return operation
 
 
-def build_spec(server_url: str = DEFAULT_SERVER_URL) -> dict[str, Any]:
+def build_spec() -> dict[str, Any]:
     _, schemas = models_json_schema(
         [(model, "validation") for model in _REQUEST_SCHEMAS]
         + [(model, "serialization") for model in _RESPONSE_SCHEMAS],
@@ -104,7 +140,8 @@ def build_spec(server_url: str = DEFAULT_SERVER_URL) -> dict[str, Any]:
             "version": version("smartflow"),
             "description": "Async REST API for rated user feedback.",
         },
-        "servers": [{"url": server_url}],
+        # No "servers": Swagger UI then calls the server it was opened from.
+        "tags": _TAGS,
         "paths": {
             "/api/health": {
                 "get": {
@@ -126,7 +163,7 @@ def build_spec(server_url: str = DEFAULT_SERVER_URL) -> dict[str, Any]:
                 }
             },
             "/api/feedback": {
-                "post": _create(
+                "post": _operation(
                     "Post a feedback",
                     "feedback",
                     FeedbackCreate,
@@ -135,17 +172,17 @@ def build_spec(server_url: str = DEFAULT_SERVER_URL) -> dict[str, Any]:
                 )
             },
             "/api/feedback/{feedback_id}/comments": {
-                "post": _create(
+                "post": _operation(
                     "Comment on a feedback",
                     "comments",
                     CommentCreate,
                     CommentOut,
-                    [400, 404, 422],
+                    [400, 404, 409, 422],
                     [_id_param("feedback_id", "The feedback to comment on")],
                 )
             },
             "/api/comments/{comment_id}/notation": {
-                "post": _create(
+                "post": _operation(
                     "Give a notation (-1, 0 or +1) to a comment",
                     "notations",
                     NotationCreate,
@@ -154,48 +191,61 @@ def build_spec(server_url: str = DEFAULT_SERVER_URL) -> dict[str, Any]:
                     [_id_param("comment_id", "The comment to rate")],
                 )
             },
+            "/api/feedback/{feedback_id}/status": {
+                "put": _operation(
+                    "Set the status of a feedback",
+                    "Product Manager",
+                    FeedbackStatusCreate,
+                    FeedbackOut,
+                    [400, 404, 409, 422],
+                    [_id_param("feedback_id", "The feedback to update")],
+                    created=False,
+                    pm=True,
+                )
+            },
+            "/api/feedback/{feedback_id}/category": {
+                "put": _operation(
+                    "Put a feedback in a category (null removes it)",
+                    "Product Manager",
+                    FeedbackCategoryCreate,
+                    FeedbackOut,
+                    [400, 404, 409, 422],
+                    [_id_param("feedback_id", "The feedback to categorise")],
+                    created=False,
+                    pm=True,
+                )
+            },
+            "/api/feedback/{feedback_id}/merge": {
+                "post": _operation(
+                    "Merge a feedback into another one",
+                    "Product Manager",
+                    FeedbackMergeCreate,
+                    FeedbackOut,
+                    [400, 404, 409, 422],
+                    [_id_param("feedback_id", "The feedback merged away (the source)")],
+                    created=False,
+                    pm=True,
+                )
+            },
+            "/api/category": {
+                "post": _operation(
+                    "Create a category",
+                    "Product Manager",
+                    CategoryCreate,
+                    CategoryOut,
+                    [400, 422],
+                    pm=True,
+                )
+            },
         },
-        "components": {"schemas": schemas["$defs"]},
+        "components": {
+            "schemas": schemas["$defs"],
+            "securitySchemes": {
+                _PM_KEY: {
+                    "type": "http",
+                    "scheme": "bearer",
+                    "description": "The PM key (SMARTFLOW_PM_API_KEY on the server)",
+                }
+            },
+        },
     }
-
-
-def swagger_html(spec_url: str) -> str:
-    """The Swagger UI page: loads Swagger from a CDN and points it at spec_url."""
-    cdn = f"https://cdn.jsdelivr.net/npm/swagger-ui-dist@{SWAGGER_UI_VERSION}"
-    return f"""<!doctype html>
-<html lang="en">
-  <head>
-    <meta charset="utf-8" />
-    <title>SmartFlow API</title>
-    <link rel="stylesheet" href="{cdn}/swagger-ui.css" />
-  </head>
-  <body>
-    <div id="swagger-ui"></div>
-    <script src="{cdn}/swagger-ui-bundle.js"></script>
-    <script>
-      SwaggerUIBundle({{ url: "{spec_url}", dom_id: "#swagger-ui" }});
-    </script>
-  </body>
-</html>
-"""
-
-
-def main() -> None:
-    parser = argparse.ArgumentParser(
-        description="Write the docs site (index.html + openapi.json) into a folder."
-    )
-    parser.add_argument("output_dir", type=Path, help="folder to write, e.g. site")
-    parser.add_argument(
-        "--server-url",
-        default=DEFAULT_SERVER_URL,
-        help=f"API base URL used by 'Try it out' (default: {DEFAULT_SERVER_URL})",
-    )
-    args = parser.parse_args()
-    args.output_dir.mkdir(parents=True, exist_ok=True)
-    spec = json.dumps(build_spec(args.server_url), indent=2) + "\n"
-    (args.output_dir / "openapi.json").write_text(spec)
-    (args.output_dir / "index.html").write_text(swagger_html("openapi.json"))
-
-
-if __name__ == "__main__":
-    main()
