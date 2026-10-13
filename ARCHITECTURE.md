@@ -83,11 +83,10 @@ src/smartflow/
 ├── app.py                   ✅ make_app(): builds the Tornado Application and its route table
 ├── config.py                ✅ Settings, read from SMARTFLOW_* environment variables and .env
 ├── log_config.py            ✅ structlog setup (plain console / JSON) and the access log
-├── openapi.py               ✅ OpenAPI spec (from the Pydantic schemas) and the Swagger UI page
-├── openapi.py               ✅ OpenAPI 3.1 spec built from the schemas; `python -m smartflow.openapi <file>` exports it
+├── openapi.py               ✅ OpenAPI 3.1 spec built from the Pydantic schemas
 ├── handlers/
 │   ├── base.py              ✅ BaseHandler: session injection, JSON body parsing, JSON errors
-│   ├── docs.py              ✅ GET /docs (Swagger UI), GET /openapi.json
+│   ├── docs.py              ✅ GET /openapi.json (Swagger UI at /docs comes from swagger-ui-py)
 │   ├── health.py            ✅ GET /api/health
 │   ├── feedback.py          ✅ POST /api/feedback
 │   ├── comments.py          ✅ POST /api/feedback/{id}/comments
@@ -101,8 +100,7 @@ src/smartflow/
 │   └── repository/          ✅ feedback, comment, notation repositories
 └── models/                  ✅ Feedback, Comment, Notation tables (see §5)
 tests/                       ✅ pytest suite (logging ✅, API / services / storage 🚧)
-.github/workflows/           ✅ ci.yml: lint, formatting, tests · docs.yml: Swagger UI on GitHub Pages
-docs/index.html              ✅ Swagger UI page; loads the generated openapi.json
+.github/workflows/           ✅ ci.yml: lint, unit tests, integration tests, Docker build
 ```
 
 The project uses the **src layout** (`src/smartflow/`), so the tests run against the installed package rather than loose files.
@@ -207,12 +205,7 @@ Successful `POST`s return **201 Created** with the created resource and a `Locat
 
 The API is described by an **OpenAPI 3.1** spec (`openapi.py`). Request and response shapes are generated from the same Pydantic schemas the handlers validate with, so the documentation cannot drift from the real validation rules; only the paths are listed by hand.
 
-It is available in two places, both built by `openapi.py`:
-
-| Where | URL | "Try it out" calls |
-|---|---|---|
-| **The running app** | `http://localhost:8888/docs` (spec at `/openapi.json`) | The same server: the spec's server URL is taken from the request, so no CORS setup is needed |
-| **GitHub Pages** | published by `.github/workflows/docs.yml` on every push to `main` | The URL in the repository variable `API_URL` (default `http://localhost:8888`) |
+The running app serves it at **`/openapi.json`**, and an interactive **Swagger UI** at **`/docs`**. The Swagger UI page and its assets come from the `swagger-ui-py` package (no CDN), registered with one call in `app.py`. The spec has no `servers` entry, so Swagger's "Try it out" calls the server the page was opened from: no CORS setup is needed.
 
 ### 6.3 Errors
 
@@ -373,7 +366,6 @@ Tests never use the Neon databases. CI runs linting (ruff), formatting checks an
 - **No authentication.** Even with `X-User-Id`, identity would come from a header the client controls. A later step: JWT (PyJWT) with a `users` table; only the identity-reading code in `BaseHandler` would change.
 - **No read endpoints yet.** Feedback and comments can be created but not listed (`GET`), so the "browse" part of the assignment is still open.
 - **No schema migrations.** Tables are created with `Base.metadata.create_all` on every server start, which creates missing tables but never alters existing ones. A table that already exists with an older shape (for example, missing a column added to the model later) is skipped **silently**: startup succeeds and the first query using the new column fails. During development, the workaround is to drop the affected tables on the dev branch and restart. Before any schema change on a database that holds data (for example the Part 2 columns), versioned migrations with **Alembic** should be introduced.
-- **Swagger "Try it out" from GitHub Pages needs CORS.** The Pages site and the API are different origins, so the browser blocks the calls until the API sends `Access-Control-Allow-*` headers and answers `OPTIONS` preflight requests. From `/docs` on the app itself this does not apply.
 - **Unknown URLs return Tornado's default HTML 404**, not the JSON error shape of §6.3. A catch-all handler (`default_handler_class`) extending `BaseHandler` would make every response JSON.
 - **No automated API tests yet.** They need the PostgreSQL test container (§10).
 - **Single process.** One Tornado process serves all requests. Scaling out means running several instances behind a load balancer; the application keeps no state in memory, so this needs no code change.
