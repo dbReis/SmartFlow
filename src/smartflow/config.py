@@ -11,6 +11,7 @@ class Settings(BaseSettings):
 
     database_url: str
     db_echo: bool = False
+    db_ssl: bool = True
     host: str = "0.0.0.0"
     port: int = 8888
     debug: bool = False
