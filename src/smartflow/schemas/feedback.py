@@ -34,9 +34,9 @@ class FeedbackOut(BaseModel):
     # from_attributes: build it from a SQLAlchemy Feedback object, not only a dict
     model_config = ConfigDict(from_attributes=True)
     id: int
-    rating: int
+    rating: RatingValue
     note: str | None
-    status: str
+    status: FeedbackStatus
     category_id: int | None
     merged_into_id: int | None
 

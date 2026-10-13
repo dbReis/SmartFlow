@@ -17,3 +17,14 @@ class CommentOut(BaseModel):
     id: int
     feedback_id: int
     comment: str
+
+
+class CommentWithScoreOut(CommentOut):
+    """A comment in a discussion: its score is the sum of its notations."""
+
+    score: int
+    votes: int
+
+
+class CommentListOut(BaseModel):
+    items: list[CommentWithScoreOut]
