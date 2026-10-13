@@ -1,4 +1,4 @@
-"""Shared fixtures for the whole test suite.
+"""Fixtures for the integration tests (real PostgreSQL, real app).
 
 pytest loads this file automatically: any test can use a fixture defined here
 just by naming it as a parameter, e.g. ``async def test_x(session_maker): ...``.
