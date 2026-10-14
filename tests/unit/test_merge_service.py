@@ -11,7 +11,7 @@ from smartflow.services.errors import (
     FeedbackNotFoundError,
 )
 
-SESSION = Mock(name="session")  # never used directly: the repositories are mocked
+SESSION = Mock(name="session")
 
 
 @pytest.fixture
@@ -54,7 +54,7 @@ async def test_merge_moves_comments_repoints_then_marks_source(
 ):
     result = await merge(1, 2)
 
-    assert result is feedback_by_id[2]  # the target, which now holds everything
+    assert result is feedback_by_id[2]
     assert repositories.mock_calls == [
         call.move_comments(1, 2),
         call.repoint_merged(1, 2),

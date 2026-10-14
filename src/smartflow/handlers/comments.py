@@ -12,8 +12,6 @@ from smartflow.services.errors import FeedbackAlreadyMergedError, FeedbackNotFou
 
 
 class CommentsHandler(BaseHandler):
-    """/api/feedback/{feedback_id}/comments: the comments of one feedback."""
-
     async def get(self, feedback_id: str) -> None:
         try:
             async with self.session_maker() as session:
@@ -32,7 +30,6 @@ class CommentsHandler(BaseHandler):
         self.finish(CommentListOut(items=items).model_dump(mode="json"))
 
     async def post(self, feedback_id: str) -> None:
-        # Tornado passes URL groups as strings; the route guarantees digits.
         data = self.parse_body(CommentCreate)
         try:
             async with self.session_maker.begin() as session:

@@ -1,11 +1,3 @@
-"""Logging setup: structlog for our code, same format for stdlib loggers.
-
-Tornado, SQLAlchemy and Alembic log through the standard ``logging`` module.
-Routing everything through one ``ProcessorFormatter`` gives a single output
-format: one plain line (level in colour) for local development, one JSON object per line in
-production (where the hosting platform collects stdout).
-"""
-
 import logging
 import os
 import sys
@@ -20,17 +12,14 @@ ACCESS_LOGGER = "tornado.access"
 
 _RESET = "\033[0m"
 _LEVEL_COLORS = {
-    "debug": "\033[2m",  # dim
-    "info": "\033[32m",  # green
-    "warning": "\033[33m",  # yellow
-    "error": "\033[31m",  # red
-    "critical": "\033[1;31m",  # bold red
+    "debug": "\033[2m",
+    "info": "\033[32m",
+    "warning": "\033[33m",
+    "error": "\033[31m",
+    "critical": "\033[1;31m",
 }
 
-# Processors applied to every record, whether it comes from structlog or
-# from a stdlib logger such as tornado.access.
 _SHARED_PROCESSORS: list[structlog.typing.Processor] = [
-    # Adds values bound with bind_contextvars(), e.g. a request id.
     structlog.contextvars.merge_contextvars,
     structlog.stdlib.add_log_level,
     structlog.stdlib.add_logger_name,
@@ -39,16 +28,11 @@ _SHARED_PROCESSORS: list[structlog.typing.Processor] = [
 
 
 def _use_colors() -> bool:
-    """Colour only a real terminal, and respect the NO_COLOR convention."""
     return sys.stdout.isatty() and "NO_COLOR" not in os.environ
 
 
 def _make_plain_renderer(colors: bool) -> structlog.typing.Processor:
     def render(_logger: object, _method: str, event_dict: dict) -> str:
-        """Render ``<timestamp> <level> <event> key=value ...`` on one line.
-
-        Access log lines skip the event name: their fields already say it all.
-        """
         timestamp = event_dict.pop("timestamp", "")
         level = event_dict.pop("level", "")
         logger = event_dict.pop("logger", "")
@@ -70,11 +54,9 @@ def _make_plain_renderer(colors: bool) -> structlog.typing.Processor:
 
 
 def configure_logging(level: str = "INFO", log_format: LogFormat = "console") -> None:
-    """Configure structlog and the stdlib root logger. Call once at startup."""
     structlog.configure(
         processors=[
             *_SHARED_PROCESSORS,
-            # Hand the event over to the stdlib handler's ProcessorFormatter.
             structlog.stdlib.ProcessorFormatter.wrap_for_formatter,
         ],
         logger_factory=structlog.stdlib.LoggerFactory(),
@@ -114,7 +96,6 @@ _access_log = structlog.get_logger(ACCESS_LOGGER)
 
 
 def log_request(handler: RequestHandler) -> None:
-    """Structured replacement for Tornado's access log (``log_function`` setting)."""
     status = handler.get_status()
     if status < 400:
         log = _access_log.info

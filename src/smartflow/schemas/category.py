@@ -12,7 +12,6 @@ class CategoryCreate(BaseModel):
 
 
 class CategoryOut(BaseModel):
-    # from_attributes: build it from a SQLAlchemy Category object, not only a dict
     model_config = ConfigDict(from_attributes=True)
     id: int
     name: str

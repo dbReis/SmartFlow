@@ -16,7 +16,6 @@ class NotationValue(IntEnum):
     UP = 1
 
 
-# Built from the enum so the allowed values are defined in one place: "-1, 0, 1"
 _ALLOWED_VALUES = ", ".join(str(value.value) for value in NotationValue)
 
 

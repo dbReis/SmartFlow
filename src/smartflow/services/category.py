@@ -25,5 +25,4 @@ async def create_category(session: AsyncSession, data: CategoryCreate) -> Catego
 
 
 async def list_categories(session: AsyncSession) -> Sequence[Category]:
-    """All categories, alphabetically: anyone may read them."""
     return await CategoryRepository(session).list_categories()

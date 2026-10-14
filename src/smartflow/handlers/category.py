@@ -4,8 +4,6 @@ from smartflow.services.category import create_category, list_categories
 
 
 class CategoryHandler(PMHandler):
-    """/api/category: anyone can list categories, only PMs can create them."""
-
     public_methods = ("GET",)
 
     async def get(self):

@@ -33,7 +33,6 @@ def test_nested_fields_use_a_dotted_path():
 
 
 def test_a_body_that_is_not_an_object_gets_a_plain_message():
-    # Pydantic's own wording would name our internal schema class.
     message = _validation_message(errors_for([1, 2]))
 
     assert message == "Request body must be a JSON object"

@@ -10,5 +10,4 @@ class ErrorDetail(BaseModel):
 
 
 class ErrorOut(BaseModel):
-    # The shape BaseHandler.write_error returns for every error.
     error: ErrorDetail

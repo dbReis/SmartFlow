@@ -8,12 +8,6 @@ from smartflow.handlers.base import BaseHandler
 
 
 class PMHandler(BaseHandler):
-    """Base class for handlers whose methods require the PM key.
-
-    A subclass can list methods anyone may call in `public_methods`, e.g. a
-    GET that reads what only PMs may change.
-    """
-
     public_methods: tuple[str, ...] = ()
 
     def initialize(
@@ -35,11 +29,7 @@ class PMHandler(BaseHandler):
 
     def prepare(self) -> None:
         super().prepare()
-        # OPTIONS is the browser's CORS preflight: it never carries the key.
-        if (
-            self.request.method == "OPTIONS"
-            or self.request.method in self.public_methods
-        ):
+        if self.request.method in self.public_methods:
             return
         if self.pm_api_key is None:
             raise HTTPError(503, reason="PM features are not configured")
@@ -48,12 +38,6 @@ class PMHandler(BaseHandler):
 
 
 class PMSessionHandler(PMHandler):
-    """GET /api/pm/session: lets a client check a PM key before using it.
-
-    prepare() has already accepted the key (or answered 401/503), so all that
-    is left is to say "yes": 204 No Content.
-    """
-
     def get(self) -> None:
         self.set_status(204)
         self.finish()
