@@ -9,8 +9,6 @@ log = structlog.get_logger(__name__)
 
 
 class CommentRepository:
-    """Database access for comments. Never commits: the caller owns the transaction."""
-
     def __init__(self, session: AsyncSession) -> None:
         self.session = session
 
@@ -28,11 +26,6 @@ class CommentRepository:
     async def list_for_feedback(
         self, feedback_id: int
     ) -> list[tuple[Comment, int, int]]:
-        """The comments of a feedback with (score, votes), best score first.
-
-        One query: notations are summed per comment with a LEFT JOIN, so
-        comments without any notation are included with score 0.
-        """
         score = func.coalesce(func.sum(Notation.notation), 0)
         votes = func.count(Notation.id)
         statement = (
@@ -40,7 +33,6 @@ class CommentRepository:
             .outerjoin(Notation, Notation.comment_id == Comment.id)
             .where(Comment.feedback_id == feedback_id)
             .group_by(Comment.id)
-            # Ties: the older comment first, so the order is stable.
             .order_by(score.desc(), Comment.id)
         )
         rows = (await self.session.execute(statement)).all()

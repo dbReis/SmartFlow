@@ -1,12 +1,3 @@
-"""OpenAPI 3.1 description of the API, built from the Pydantic schemas.
-
-Request and response shapes come from the same schemas the handlers validate
-with, so the documentation cannot drift from the real rules. Only the paths are
-written here by hand.
-
-The running app serves it at /openapi.json, and Swagger UI at /docs.
-"""
-
 from importlib.metadata import version
 from typing import Any
 
@@ -55,7 +46,6 @@ _ERRORS = {
     503: "PM features are not configured on the server",
 }
 
-# The tags group operations in Swagger UI, in this order.
 _TAGS = [
     {"name": "feedback", "description": "Browse and post feedback"},
     {"name": "comments", "description": "Read and post the discussion of a feedback"},
@@ -68,7 +58,6 @@ _TAGS = [
     {"name": "health", "description": "Service status"},
 ]
 
-# Name of the security scheme for PM endpoints (Authorization: Bearer <key>).
 _PM_KEY = "pmKey"
 
 
@@ -81,7 +70,6 @@ def _json(schema: dict[str, Any]) -> dict[str, Any]:
 
 
 def _id_param(name: str, description: str) -> dict[str, Any]:
-    # Routes match \d{1,9}: digits only, small enough for a PostgreSQL INTEGER.
     return {
         "name": name,
         "in": "path",
@@ -102,11 +90,6 @@ def _operation(
     created: bool = True,
     pm: bool = False,
 ) -> dict[str, Any]:
-    """One operation with a JSON body and a JSON response or JSON error.
-
-    created=True: 201 + Location header (a new resource); False: 200 (a change).
-    pm=True: requires the PM key, which adds the 401 and 503 errors.
-    """
     success: dict[str, Any] = {
         "description": "Created" if created else "OK",
         "content": _json(_ref(out)),
@@ -145,7 +128,6 @@ def _get(
     errors: list[int] | None = None,
     params: list[dict[str, Any]] | None = None,
 ) -> dict[str, Any]:
-    """A read operation: no body, 200 with JSON, or a JSON error."""
     responses: dict[str, Any] = {
         "200": {"description": "OK", "content": _json(_ref(out))}
     }
@@ -177,7 +159,6 @@ def build_spec() -> dict[str, Any]:
             "version": version("smartflow"),
             "description": "Async REST API for rated user feedback.",
         },
-        # No "servers": Swagger UI then calls the server it was opened from.
         "tags": _TAGS,
         "paths": {
             "/api/health": {

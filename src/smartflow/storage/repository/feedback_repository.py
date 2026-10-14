@@ -7,13 +7,10 @@ from smartflow.models.feedback import Feedback
 
 log = structlog.get_logger(__name__)
 
-# No pagination yet: never return more than this many feedback in one list.
 LIST_LIMIT = 100
 
 
 class FeedbackRepository:
-    """Database access for feedback. Never commits: the caller owns the transaction."""
-
     def __init__(self, session: AsyncSession) -> None:
         self.session = session
 
@@ -21,7 +18,6 @@ class FeedbackRepository:
         log.debug("creating_feedback")
         feedback = Feedback(rating=rating, note=note)
         self.session.add(feedback)
-        # Send the INSERT now (inside the open transaction) so feedback.id is set.
         await self.session.flush()
         log.debug("feedback_inserted", feedback_id=feedback.id)
         return feedback
@@ -60,7 +56,6 @@ class FeedbackRepository:
         return feedback
 
     async def merge(self, feedback: Feedback, target_id: int) -> Feedback:
-        """Mark a feedback as merged into another one."""
         feedback.merged_into_id = target_id
         await self.session.flush()
         log.debug(
@@ -69,7 +64,6 @@ class FeedbackRepository:
         return feedback
 
     async def repoint_merged(self, from_feedback_id: int, to_feedback_id: int) -> None:
-        """Feedback merged into `from` now points to `to`, so pointers never chain."""
         result = await self.session.execute(
             update(Feedback)
             .where(Feedback.merged_into_id == from_feedback_id)

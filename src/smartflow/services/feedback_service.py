@@ -35,12 +35,10 @@ async def create_feedback(session: AsyncSession, data: FeedbackCreate) -> Feedba
 
 
 async def list_feedback(session: AsyncSession) -> list[tuple[Feedback, int]]:
-    """Active feedback with comment counts, newest first."""
     return await FeedbackRepository(session).list_feedback()
 
 
 async def get_feedback(session: AsyncSession, feedback_id: int) -> Feedback:
-    """Any feedback, merged ones included (reading a merged feedback is allowed)."""
     feedback = await FeedbackRepository(session).get_feedback(feedback_id)
     if feedback is None:
         log.info("feedback_not_found", feedback_id=feedback_id)
@@ -49,11 +47,6 @@ async def get_feedback(session: AsyncSession, feedback_id: int) -> Feedback:
 
 
 async def get_active_feedback(session: AsyncSession, feedback_id: int) -> Feedback:
-    """Load a feedback that can still be changed.
-
-    Raises FeedbackNotFoundError if it doesn't exist, and FeedbackAlreadyMergedError
-    if it was merged into another feedback (merged feedback is read-only).
-    """
     feedback = await FeedbackRepository(session).get_feedback(feedback_id)
     if feedback is None:
         log.info("feedback_not_found", feedback_id=feedback_id)
@@ -73,7 +66,6 @@ async def add_to_category(
 ) -> Feedback:
     feedback = await get_active_feedback(session, feedback_id)
 
-    # None removes the feedback from its category: nothing to look up.
     category_id = data.category_id
     if (
         category_id is not None
@@ -105,17 +97,10 @@ async def update_status(
 async def merge(
     session: AsyncSession, feedback_id: int, data: FeedbackMergeCreate
 ) -> Feedback:
-    """Merge feedback `feedback_id` (source) into `data.target_id` (target).
-
-    The target receives all of the source's comments (and, through them, their
-    notations). The source stays, marked as merged, as a read-only record.
-    Everything happens in the caller's transaction: all or nothing.
-    """
     if feedback_id == data.target_id:
         log.info("feedback_merge_into_itself", feedback_id=feedback_id)
         raise CannotMergeIntoItselfError(feedback_id)
 
-    # Both must exist and still be active: no chains, no cycles.
     source = await get_active_feedback(session, feedback_id)
     target = await get_active_feedback(session, data.target_id)
 

@@ -1,10 +1,3 @@
-"""Domain errors raised by services.
-
-Services know nothing about HTTP: they raise these, and handlers translate
-them into status codes (e.g. FeedbackNotFoundError → 404).
-"""
-
-
 class FeedbackNotFoundError(Exception):
     def __init__(self, feedback_id: int) -> None:
         super().__init__(f"Feedback {feedback_id} not found")
@@ -30,8 +23,6 @@ class CannotMergeIntoItselfError(Exception):
 
 
 class FeedbackAlreadyMergedError(Exception):
-    """The feedback was merged into another one, so it is read-only."""
-
     def __init__(self, feedback_id: int) -> None:
         super().__init__(f"Feedback {feedback_id} already merged")
         self.feedback_id = feedback_id

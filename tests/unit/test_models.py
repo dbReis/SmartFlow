@@ -7,7 +7,7 @@ from smartflow.models import Feedback, Notation
 
 def create_table_sql(model) -> str:
     sql = str(CreateTable(model.__table__).compile(dialect=postgresql.dialect()))
-    return " ".join(sql.split())  # one line, single spaces: easier to search
+    return " ".join(sql.split())
 
 
 @pytest.fixture(scope="module")
@@ -20,8 +20,6 @@ def test_rating_is_limited_to_1_to_5(feedback_sql):
 
 
 def test_status_values_are_quoted_text(feedback_sql):
-    # Without quotes PostgreSQL would read them as column names. SQL keywords
-    # are case-insensitive, so compare in lower case.
     expected = "check (status in ('open', 'closed_backlog', 'closed_solved', 'closed_rejected'))"
     assert expected in feedback_sql.lower()
 

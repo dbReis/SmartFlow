@@ -52,8 +52,6 @@ class FeedbackHandler(BaseHandler):
 
 
 class FeedbackItemHandler(BaseHandler):
-    """/api/feedback/{feedback_id}: one feedback, merged ones included."""
-
     async def get(self, feedback_id: str):
         try:
             async with self.session_maker() as session:
@@ -99,8 +97,6 @@ class FeedbackStatusHandler(PMHandler):
 
 
 class FeedbackMergeHandler(PMHandler):
-    """POST /api/feedback/{id}/merge: merge this feedback into body.target_id."""
-
     async def post(self, feedback_id: str):
         data = self.parse_body(FeedbackMergeCreate)
         try:

@@ -36,14 +36,14 @@ def test_correct_key_identifies_a_pm(authorization):
 @pytest.mark.parametrize(
     "authorization",
     [
-        None,  # no header at all
+        None,
         "",
-        "Bearer",  # scheme without a key
+        "Bearer",
         "Bearer wrong-key",
-        f"Bearer {PM_KEY.upper()}",  # keys are case-sensitive
+        f"Bearer {PM_KEY.upper()}",
         f"Bearer {PM_KEY} extra",
-        f"Basic {PM_KEY}",  # wrong scheme
-        PM_KEY,  # key without a scheme
+        f"Basic {PM_KEY}",
+        PM_KEY,
     ],
 )
 def test_anything_else_is_not_a_pm(authorization):
@@ -65,12 +65,10 @@ def test_prepare_rejects_wrong_key_with_401():
 
 
 def test_prepare_lets_a_pm_through():
-    make_handler(f"Bearer {PM_KEY}").prepare()  # no exception
+    make_handler(f"Bearer {PM_KEY}").prepare()
 
 
 def test_pm_endpoints_are_closed_when_no_key_is_configured():
-    # Even a request with a key: without server configuration, nobody is a PM,
-    # and the response says so (503) rather than blaming the credentials (401).
     with pytest.raises(HTTPError) as exc_info:
         make_handler(f"Bearer {PM_KEY}", pm_api_key=None).prepare()
 

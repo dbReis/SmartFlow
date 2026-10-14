@@ -1,5 +1,3 @@
-"""GET /openapi.json: the API's OpenAPI spec (Swagger UI at /docs uses it too)."""
-
 from tornado.web import RequestHandler
 
 from smartflow.openapi import build_spec

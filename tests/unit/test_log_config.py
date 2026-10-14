@@ -108,7 +108,7 @@ def test_console_colors_only_the_level():
 
 
 def test_console_has_no_colors_when_not_a_terminal(capsys):
-    configure_logging("INFO", "console")  # pytest captures stdout: not a TTY
+    configure_logging("INFO", "console")
 
     structlog.get_logger().error("boom")
 

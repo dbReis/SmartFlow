@@ -20,11 +20,11 @@ def create_engine(settings: Settings) -> AsyncEngine:
     engine = create_async_engine(
         database_url,
         echo=settings.db_echo,
-        pool_recycle=3600,  # Recycle connections every hour
-        pool_pre_ping=True,  # Neon's dev branch sleeps after ~5 min idle
+        pool_recycle=3600,
+        pool_pre_ping=True,
         connect_args={
-            "ssl": settings.db_ssl,  # required by Neon, off for the test database
-            "timeout": 10,  # Fail after 10 s instead of asyncpg's default 60 s
+            "ssl": settings.db_ssl,
+            "timeout": 10,
         },
     )
     log.debug(
@@ -58,16 +58,13 @@ async def check_connection(engine: AsyncEngine) -> None:
         "database_connected",
         host=engine.url.host,
         database=engine.url.database,
-        # The first connection after idle includes Neon waking the branch up.
         ms=round((time.perf_counter() - started) * 1000),
     )
 
 
 async def create_tables(engine: AsyncEngine) -> None:
-    """Create missing tables. Existing tables are left unchanged (no migrations)."""
     log.debug("tables_creating", tables=list(Base.metadata.tables))
     try:
-        # One transaction: on any error, no table is left half-created.
         async with engine.begin() as conn:
             await conn.run_sync(Base.metadata.create_all)
     except Exception as exc:

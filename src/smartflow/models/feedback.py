@@ -21,7 +21,6 @@ class RatingValue(IntEnum):
     VERY_GOOD = 5
 
 
-# Built from the enum so the allowed values are defined in one place: "1, 2, 3, 4, 5"
 _ALLOWED_VALUES = ", ".join(str(value.value) for value in RatingValue)
 _ALLOWED_STATUS_VALUES = ", ".join(f"'{value}'" for value in FeedbackStatus)
 
@@ -29,7 +28,6 @@ _ALLOWED_STATUS_VALUES = ", ".join(f"'{value}'" for value in FeedbackStatus)
 class Feedback(Base):
     __tablename__ = "feedback"
     __table_args__ = (
-        # Stored as a number (not a PostgreSQL ENUM) so ratings can be averaged: AVG(rating).
         CheckConstraint(f"rating IN ({_ALLOWED_VALUES})", name="rating_value"),
         CheckConstraint(f"status in ({_ALLOWED_STATUS_VALUES})", name="status_value"),
     )
