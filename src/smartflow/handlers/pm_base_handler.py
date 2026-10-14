@@ -35,7 +35,11 @@ class PMHandler(BaseHandler):
 
     def prepare(self) -> None:
         super().prepare()
-        if self.request.method in self.public_methods:
+        # OPTIONS is the browser's CORS preflight: it never carries the key.
+        if (
+            self.request.method == "OPTIONS"
+            or self.request.method in self.public_methods
+        ):
             return
         if self.pm_api_key is None:
             raise HTTPError(503, reason="PM features are not configured")
