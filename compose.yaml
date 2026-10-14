@@ -1,0 +1,54 @@
+name: smartflow
+services:
+  psql:
+    image: postgres:18-alpine
+    environment:
+      POSTGRES_USER: smartflow
+      POSTGRES_PASSWORD: smartflow
+      POSTGRES_DB: smartflow
+    volumes:
+      - db-data:/var/lib/postgresql
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U smartflow -d smartflow"]
+      interval: 2s
+      timeout: 3s
+      retries: 15
+
+  smartflow:
+    # build: . If we want to use the Dockerfile from this repo instead of fetching an image from my public repo
+    image: ddosreis/smartflow:1.0.0
+    environment:
+      SMARTFLOW_DATABASE_URL: postgresql+asyncpg://smartflow:smartflow@db:5432/smartflow
+      SMARTFLOW_DB_SSL: "false"
+      SMARTFLOW_PM_API_KEY: local-pm-key
+      SMARTFLOW_LOG_FORMAT: console
+    ports:
+      - 8989:8888"
+    depends_on:
+      db:
+        condition: service_healthy
+    healthcheck:
+      test:
+        [
+          "CMD",
+          "python",
+          "-c",
+          "import urllib.request; urllib.request.urlopen('http://127.0.0.1:8888/api/health', timeout=2)",
+        ]
+      interval: 10s
+      timeout: 3s
+      start_period: 15s
+      retries: 3
+
+  smartflow-ui:
+    image: ddosreis/smartflow-ui:0.0.0
+    environment:
+      API_URL: http://api:8888
+    ports:
+      - 8080:80"
+    depends_on:
+      api:
+        condition: service_healthy
+
+volumes:
+  db-data:
