@@ -308,7 +308,8 @@ All configuration comes from environment variables with the `SMARTFLOW_` prefix,
 | Environment | Database | Notes |
 |---|---|---|
 | Local development | Neon **dev** branch | URL in the developer's `.env` |
-| Tests and CI | PostgreSQL container | 🚧 Throwaway database, no secrets needed |
+| Tests and CI | PostgreSQL container | The dev container's `db` service (data in memory) and a service container in CI; no secrets needed |
+| Local, containerised | PostgreSQL container | `docker compose up` (`compose.yaml`): the published UI and API images plus a PostgreSQL, for running SmartFlow without any setup. The UI's nginx forwards `/api` to the API, so no CORS is involved |
 | Production | Neon **prod** branch | URL stored as a secret on the hosting platform |
 
 **PostgreSQL everywhere.** The same database type is used in every environment, so tests exercise the same behaviour as production (types, constraints, SQL dialect) and the code has no database-specific branches.
