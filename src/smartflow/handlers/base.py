@@ -28,6 +28,36 @@ class BaseHandler(RequestHandler):
 
     def set_default_headers(self) -> None:
         self.set_header("Content-Type", "application/json; charset=utf-8")
+        self._set_cors_headers()
+
+    def _set_cors_headers(self) -> None:
+        """Allow browser pages from the configured origins to call the API.
+
+        Browsers block JavaScript from reading responses from another origin
+        (scheme + host + port) unless the response allows it. Only origins in
+        the allow-list get the headers, never "*": other websites stay blocked.
+        Runs for every response, errors included (Tornado re-applies the
+        default headers before writing an error).
+        """
+        origin = self.request.headers.get("Origin")
+        if origin is None or origin not in self.settings.get("cors_origins", []):
+            return
+        self.set_header("Access-Control-Allow-Origin", origin)
+        # The answer depends on the Origin header: caches must not share it.
+        self.set_header("Vary", "Origin")
+        self.set_header("Access-Control-Allow-Methods", "GET, POST, PUT, OPTIONS")
+        self.set_header(
+            "Access-Control-Allow-Headers", "Content-Type, Authorization, X-User-Id"
+        )
+        # Let the UI read the Location header of 201 responses.
+        self.set_header("Access-Control-Expose-Headers", "Location")
+        # Browsers may reuse a preflight answer for 10 minutes.
+        self.set_header("Access-Control-Max-Age", "600")
+
+    def options(self, *args: str) -> None:
+        """Answer the browser's CORS preflight; the headers are already set."""
+        self.set_status(204)
+        self.finish()
 
     def prepare(self) -> None:
         """Runs before every get/post/..."""
