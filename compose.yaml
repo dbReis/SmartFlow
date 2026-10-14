@@ -18,12 +18,12 @@ services:
     # build: . If we want to use the Dockerfile from this repo instead of fetching an image from my public repo
     image: ddosreis/smartflow:1.0.0
     environment:
-      SMARTFLOW_DATABASE_URL: postgresql+asyncpg://smartflow:smartflow@db:5432/smartflow
+      SMARTFLOW_DATABASE_URL: postgresql+asyncpg://smartflow:smartflow@psql:5432/smartflow
       SMARTFLOW_DB_SSL: "false"
       SMARTFLOW_PM_API_KEY: local-pm-key
       SMARTFLOW_LOG_FORMAT: console
     ports:
-      - 8989:8888"
+      - "8989:8888"
     depends_on:
       psql:
         condition: service_healthy
@@ -43,9 +43,9 @@ services:
   smartflow-ui:
     image: ddosreis/smartflow-ui:0.0.0
     environment:
-      API_URL: http://api:8888
+      API_URL: http://smartflow:8888
     ports:
-      - 8080:80"
+      - "8080:80"
     depends_on:
       smartflow:
         condition: service_healthy
