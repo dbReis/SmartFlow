@@ -300,6 +300,8 @@ All configuration comes from environment variables with the `SMARTFLOW_` prefix,
 | `SMARTFLOW_DEBUG` | `false` | Tornado debug mode (auto-reload) |
 | `SMARTFLOW_LOG_LEVEL` | `DEBUG` | `DEBUG`, `INFO`, `WARNING`, `ERROR` |
 | `SMARTFLOW_LOG_FORMAT` | `console` | `console` (readable) or `json` (production) |
+| `SMARTFLOW_PM_API_KEY` | none | The PM key (Bearer token). Without it, PM endpoints answer 503 |
+| `SMARTFLOW_CORS_ORIGINS` | empty | Comma-separated web origins allowed to call the API from a browser, e.g. `https://smartflow-ui.onrender.com,http://localhost:5173` |
 
 ### 8.3 Environments
 
@@ -361,6 +363,7 @@ Tests never use the Neon databases. CI runs linting (ruff), formatting checks an
 | **One error shape `{code, message}`** | Structured per-field error lists | Simple and consistent for every client | Clients cannot map errors to fields without reading the message |
 | **Header identification (`X-User-Id`)** (planned) | JWT authentication | Not required by the assignment; keeps the MVP small; isolated in one place so it can be replaced | Clients can claim any identity |
 | **`create_all` for the schema** | Alembic migrations | Simpler for the MVP | Cannot alter existing tables (see §12) |
+| **CORS allow-list** (`SMARTFLOW_CORS_ORIGINS`) | `Access-Control-Allow-Origin: *`; serving the UI from the API's origin | The UI is a separate site; only listed origins get CORS headers, so other websites' pages cannot call the API from their visitors' browsers | The UI's URL must be configured on the API |
 | **structlog** | stdlib `logging`, loguru | Structured fields, JSON in production, works with Tornado's and SQLAlchemy's stdlib loggers | Some configuration code |
 | **pydantic-settings** | `os.getenv` | One validated list of settings; fails at startup on bad values | — |
 
