@@ -30,7 +30,7 @@ def make_app(
     deps = {"session_maker": session_maker}
     pm_deps = {**deps, "pm_api_key": settings.pm_api_key}
     routes = [
-        (r"/api/health", HealthHandler),
+        (r"/api/health", HealthHandler, deps),
         (r"/api/feedback", FeedbackHandler, deps),
         (r"/api/feedback/(\d{1,9})", FeedbackItemHandler, deps),
         (r"/api/feedback/(\d{1,9})/comments", CommentsHandler, deps),
