@@ -49,6 +49,8 @@ def make_app(
         default_handler_args=deps,
         debug=settings.debug,
         log_function=log_request,
+        # Read by BaseHandler.set_default_headers (self.settings["cors_origins"]).
+        cors_origins=settings.cors_origin_list,
     )
     # Swagger UI at /docs, served from the swagger-ui-py package (no CDN).
     api_doc(app, config=build_spec(), url_prefix="/docs", title="SmartFlow API")
