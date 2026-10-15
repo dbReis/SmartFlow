@@ -1,3 +1,11 @@
+"""Shared base for every API handler.
+
+BaseHandler gives all endpoints the same behaviour: the injected session
+factory, JSON responses, request validation (400/422) and one JSON error
+format for every failure. Endpoint handlers extend it instead of Tornado's
+RequestHandler.
+"""
+
 import json
 from typing import Any
 
@@ -10,10 +18,18 @@ log = structlog.get_logger(__name__)
 
 
 def _field(error: Any) -> str:
+    """Turn a pydantic error location into a dotted path, e.g. "items.0.name"."""
     return ".".join(str(part) for part in error["loc"])
 
 
 def _validation_message(errors: list[Any]) -> str:
+    """Join pydantic errors into one client-facing line.
+
+    Each error becomes "field: problem", e.g.
+    "rating: Input should be 1, 2, 3, 4 or 5; ratting: Extra inputs are not permitted".
+    An error about the whole body (no field) gets a plain message instead of
+    pydantic's, which would name our internal schema class.
+    """
     return "; ".join(
         f"{_field(e)}: {e['msg']}" if e["loc"] else "Request body must be a JSON object"
         for e in errors
@@ -21,13 +37,39 @@ def _validation_message(errors: list[Any]) -> str:
 
 
 class BaseHandler(RequestHandler):
+    """Base class for every SmartFlow endpoint.
+
+    Handlers open their own session per request: ``self.session_maker.begin()``
+    for writes (commit on success, rollback on error) and
+    ``self.session_maker()`` for reads.
+    """
+
     def initialize(self, session_maker: async_sessionmaker[AsyncSession]) -> None:
+        """Store the session factory passed in by make_app() (the route's deps dict).
+
+        Injected rather than imported so every handler shares the app's single
+        engine.
+
+        Args:
+            session_maker: Factory that opens one database session per request.
+        """
         self.session_maker = session_maker
 
     def set_default_headers(self) -> None:
+        """Mark every response, errors included, as JSON.
+
+        Tornado calls this before each request and again before writing an error,
+        so headers set here are never lost.
+        """
         self.set_header("Content-Type", "application/json; charset=utf-8")
 
     def prepare(self) -> None:
+        """Log every incoming request before it reaches get()/post()/put().
+
+        Tornado calls this hook first on each request. Subclasses extend it:
+        PMHandler calls super().prepare(), then checks the PM key.
+        Logs the body's size only, never its content (it may hold user text).
+        """
         log.debug(
             "request_received",
             method=self.request.method,
@@ -36,6 +78,18 @@ class BaseHandler(RequestHandler):
         )
 
     def parse_body[T: BaseModel](self, schema: type[T]) -> T:
+        """Parse the JSON body and validate it against a schema.
+
+        Args:
+            schema: The pydantic model the body must match, e.g. FeedbackCreate.
+
+        Returns:
+            A validated instance of that schema.
+
+        Raises:
+            HTTPError: 400 if the body is not valid JSON; 422 if it is JSON but
+                breaks the schema's rules (the message names each invalid field).
+        """
         try:
             data = json.loads(self.request.body)
         except ValueError as exc:
@@ -59,4 +113,10 @@ class BaseHandler(RequestHandler):
         return parsed
 
     def write_error(self, status_code: int, **kwargs: Any) -> None:
+        """Write every error, expected or not, as {"error": {"code", "message"}}.
+
+        Tornado calls this for any HTTPError and for unexpected exceptions (500).
+        The message is the HTTP reason only: tracebacks go to the logs, never to
+        the client.
+        """
         self.finish({"error": {"code": status_code, "message": self._reason}})

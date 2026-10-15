@@ -1,3 +1,9 @@
+"""SQLAlchemy models (the database tables).
+
+Importing this package registers every table on ``Base.metadata``, which
+``create_tables()`` needs in order to create them all.
+"""
+
 from smartflow.models.base import Base
 from smartflow.models.category import Category
 from smartflow.models.comment import Comment
