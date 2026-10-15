@@ -1,3 +1,11 @@
+"""The API's OpenAPI spec, built from the same pydantic schemas that validate requests.
+
+Because the component schemas are generated from the DTOs, the documentation
+can't drift from what the API really accepts. Only the paths are written by
+hand, with the small helpers below. Served at /openapi.json and shown by
+Swagger UI at /docs.
+"""
+
 from importlib.metadata import version
 from typing import Any
 
@@ -17,6 +25,8 @@ from smartflow.schemas.feedback import (
 )
 from smartflow.schemas.notation import NotationCreate, NotationOut
 
+# Request bodies use the "validation" view of a model, responses the
+# "serialization" view (they can differ, e.g. for fields with defaults).
 _REQUEST_SCHEMAS = [
     FeedbackCreate,
     CommentCreate,
@@ -37,6 +47,7 @@ _RESPONSE_SCHEMAS = [
     ErrorOut,
 ]
 
+# One description per error status, reused by every operation that can return it.
 _ERRORS = {
     400: "The body is not valid JSON",
     401: "Missing or invalid PM key",
@@ -58,18 +69,29 @@ _TAGS = [
     {"name": "health", "description": "Service status"},
 ]
 
+# Name of the security scheme; marks an operation as needing the PM key (Swagger's Authorize button).
 _PM_KEY = "pmKey"
 
 
 def _ref(model: type[BaseModel]) -> dict[str, str]:
+    """Return a JSON reference to a model's schema under components/schemas."""
     return {"$ref": f"#/components/schemas/{model.__name__}"}
 
 
 def _json(schema: dict[str, Any]) -> dict[str, Any]:
+    """Wrap a schema as an ``application/json`` content entry."""
     return {"application/json": {"schema": schema}}
 
 
 def _id_param(name: str, description: str) -> dict[str, Any]:
+    """Describe a numeric id path parameter.
+
+    The maximum matches the routes' ``\\d{1,9}`` pattern in app.py.
+
+    Args:
+        name: The parameter name used in the path, e.g. "feedback_id".
+        description: What the id refers to.
+    """
     return {
         "name": name,
         "in": "path",
@@ -90,6 +112,22 @@ def _operation(
     created: bool = True,
     pm: bool = False,
 ) -> dict[str, Any]:
+    """Describe an operation that takes a JSON body (POST/PUT).
+
+    Args:
+        summary: One-line description shown in Swagger.
+        tag: The Swagger section it appears in.
+        body: Schema of the request body.
+        out: Schema of the success response.
+        errors: Error statuses it can return; each one gets the ErrorOut body.
+        params: Path parameters, if any.
+        created: True for 201 Created with a Location header, False for 200 OK.
+        pm: True if it requires the PM key; adds 401 and 503 and the security
+            requirement.
+
+    Returns:
+        The OpenAPI operation object.
+    """
     success: dict[str, Any] = {
         "description": "Created" if created else "OK",
         "content": _json(_ref(out)),
@@ -128,6 +166,18 @@ def _get(
     errors: list[int] | None = None,
     params: list[dict[str, Any]] | None = None,
 ) -> dict[str, Any]:
+    """Describe a GET operation (no body, 200 OK).
+
+    Args:
+        summary: One-line description shown in Swagger.
+        tag: The Swagger section it appears in.
+        out: Schema of the success response.
+        errors: Error statuses it can return, if any.
+        params: Path parameters, if any.
+
+    Returns:
+        The OpenAPI operation object.
+    """
     responses: dict[str, Any] = {
         "200": {"description": "OK", "content": _json(_ref(out))}
     }
@@ -147,6 +197,14 @@ def _get(
 
 
 def build_spec() -> dict[str, Any]:
+    """Build the full OpenAPI 3.1 document.
+
+    The version comes from the installed package (pyproject.toml), so the
+    docs always show the version that is actually running.
+
+    Returns:
+        The spec as a JSON-serialisable dict.
+    """
     _, schemas = models_json_schema(
         [(model, "validation") for model in _REQUEST_SCHEMAS]
         + [(model, "serialization") for model in _RESPONSE_SCHEMAS],
