@@ -30,7 +30,7 @@ async def create_notation(
     """
     if await CommentRepository(session).get_comment(comment_id=comment_id) is None:
         log.info("notation_comment_not_found", comment_id=comment_id)
-        raise CommentNotFoundError
+        raise CommentNotFoundError(comment_id=comment_id)
 
     notation = await NotationRepository(session).add_notation(
         comment_id=comment_id, notation=data.notation
