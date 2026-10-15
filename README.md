@@ -14,6 +14,13 @@ Both services run on Render's free tier, which puts them to sleep when idle: the
 
 The Product Manager features need a PM key. For the hosted version it is shared separately, together with the links above.
 
+## How the work was planned
+
+I split the assignment into user stories (for example *US-03 · Table creation*) and developed each one on its own branch. The board with every story is on Trello: [SmartFlow board](https://trello.com/invite/b/6ac928ffcabaab1e1a028b46/ATTI76b91df616a4bd10e834c43e53c25deeB42FFD10/smartflow).
+
+Note: since this is an MVP for an assessment, I kept the stories short and didn't write formal acceptance criteria. I spent the time on the implementation and its tests instead.
+
+
 ## Run it locally with Docker Compose
 
 The only requirement is [Docker](https://docs.docker.com/get-docker/) with Docker Compose (included in Docker Desktop). No account, configuration file or build is needed: Compose pulls the published images and starts the web UI, the API and a PostgreSQL database.
