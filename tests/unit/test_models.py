@@ -35,3 +35,11 @@ def test_deleting_a_category_or_merge_target_keeps_the_feedback(feedback_sql):
 
 def test_notation_is_limited_to_minus_one_zero_and_one():
     assert "CHECK (notation IN (-1, 0, 1))" in create_table_sql(Notation)
+
+
+def test_a_user_has_one_notation_per_comment():
+    sql = create_table_sql(Notation)
+
+    assert (
+        "CONSTRAINT uq_notation_comment_id_user_id UNIQUE (comment_id, user_id)" in sql
+    )

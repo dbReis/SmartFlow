@@ -12,18 +12,22 @@ from smartflow.storage.repository.notation_repository import NotationRepository
 log = structlog.get_logger(__name__)
 
 
-async def create_notation(
-    session: AsyncSession, comment_id: int, data: NotationCreate
+async def set_notation(
+    session: AsyncSession, comment_id: int, user_id: str, data: NotationCreate
 ) -> Notation:
-    """Record a notation on a comment.
+    """Set the user's notation on a comment: create it, or change their vote.
+
+    Each user has at most one notation per comment. Giving 0 works as
+    removing the vote, since it adds nothing to the score.
 
     Args:
         session: The request's session, inside a transaction the caller commits.
         comment_id: The comment voted on.
+        user_id: Who votes.
         data: The validated body with the notation (-1, 0 or +1).
 
     Returns:
-        The new notation, with its id assigned.
+        The user's notation on that comment.
 
     Raises:
         CommentNotFoundError: If the comment does not exist.
@@ -32,8 +36,8 @@ async def create_notation(
         log.info("notation_comment_not_found", comment_id=comment_id)
         raise CommentNotFoundError(comment_id=comment_id)
 
-    notation = await NotationRepository(session).add_notation(
-        comment_id=comment_id, notation=data.notation
+    notation = await NotationRepository(session).upsert_notation(
+        comment_id=comment_id, user_id=user_id, notation=data.notation
     )
-    log.info("notation_created", notation_id=notation.id, comment_id=comment_id)
+    log.info("notation_set", notation_id=notation.id, comment_id=comment_id)
     return notation
