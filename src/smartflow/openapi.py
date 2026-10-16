@@ -101,6 +101,31 @@ def _id_param(name: str, description: str) -> dict[str, Any]:
     }
 
 
+def _with_user_id(operation: dict[str, Any]) -> dict[str, Any]:
+    """Add the X-User-Id header, and the 401 it can cause, to an operation.
+
+    Args:
+        operation: An operation built by _operation() or _get().
+
+    Returns:
+        The same operation, updated in place.
+    """
+    operation.setdefault("parameters", []).append(
+        {
+            "name": "X-User-Id",
+            "in": "header",
+            "required": True,
+            "description": "Identifies the user (e.g. a UUID the client keeps)",
+            "schema": {"type": "string", "minLength": 1, "maxLength": 64},
+        }
+    )
+    operation["responses"]["401"] = {
+        "description": "Missing or invalid X-User-Id",
+        "content": _json(_ref(ErrorOut)),
+    }
+    return operation
+
+
 def _operation(
     summary: str,
     tag: str,
@@ -279,13 +304,16 @@ def build_spec() -> dict[str, Any]:
                 ),
             },
             "/api/comments/{comment_id}/notation": {
-                "post": _operation(
-                    "Give a notation (-1, 0 or +1) to a comment",
-                    "notations",
-                    NotationCreate,
-                    NotationOut,
-                    [400, 404, 422],
-                    [_id_param("comment_id", "The comment to rate")],
+                "put": _with_user_id(
+                    _operation(
+                        "Give or change your notation (-1, 0 or +1) on a comment",
+                        "notations",
+                        NotationCreate,
+                        NotationOut,
+                        [400, 404, 422],
+                        [_id_param("comment_id", "The comment to rate")],
+                        created=False,
+                    )
                 )
             },
             "/api/feedback/{feedback_id}/status": {

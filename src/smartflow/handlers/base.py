@@ -120,3 +120,22 @@ class BaseHandler(RequestHandler):
         the client.
         """
         self.finish({"error": {"code": status_code, "message": self._reason}})
+
+    def get_user_id(self) -> str:
+        """Identify the user from the X-User-Id header.
+
+        Users have no accounts yet: the client sends its own id (the UI uses a
+        UUID kept in localStorage). It is what makes a notation unique per
+        user. With JWT later, only this method changes.
+
+        Returns:
+            The user id, without surrounding whitespace.
+
+        Raises:
+            HTTPError: 401 if the header is missing, blank or longer than 64
+                characters (the size of the notation.user_id column).
+        """
+        user_id = self.request.headers.get("X-User-Id", "").strip()
+        if not user_id or len(user_id) > 64:
+            raise HTTPError(401, reason="Missing or invalid X-User-Id")
+        return user_id
